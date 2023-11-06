@@ -1,18 +1,17 @@
 #ifndef RADIANS_H
 #define RADIANS_H
 
-
 #include <cmath>
 
 
 inline float radians(float degrees)
 {
-	return degrees*(M_PIf/180.0f);
+	return degrees*(static_cast<float>(M_PI)/180.0f);
 }
 
 inline float degrees(float radians)
 {
-	return radians*(180.0f/M_PIf);
+	return radians*(180.0f/static_cast<float>(M_PI));
 }
 
 #endif // RADIANS_H
