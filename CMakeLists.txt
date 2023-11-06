@@ -9,6 +9,7 @@ set(SOURCES main.cpp
 			Scene.cpp include/Scene.h
 			include/Object.h
 			include/Vec3.h
+			include/Ray.h
 )
 
 add_executable(raytracer2 ${SOURCES})
