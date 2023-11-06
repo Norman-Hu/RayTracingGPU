@@ -6,10 +6,13 @@ set(CMAKE_CXX_STANDARD 20)
 add_subdirectory(third_party)
 
 set(SOURCES main.cpp
-			Scene.cpp include/Scene.h
-			include/Object.h
 			include/Vec3.h
 			include/Ray.h
+			include/Matrix.h
+			include/Radians.h
+			include/Camera.h
+			include/Object.h
+			Scene.cpp include/Scene.h
 )
 
 add_executable(raytracer2 ${SOURCES})

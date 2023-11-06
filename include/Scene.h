@@ -7,8 +7,8 @@
 class Scene
 {
 public:
-	Scene();
-	~Scene();
+	Scene() = default;
+	~Scene() = default;
 
 private:
 	std::vector<Object> contents;

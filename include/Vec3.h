@@ -71,7 +71,7 @@ public:
 
 // operators
 public:
-	Vec3 & operator+=(const Vec3 & other)
+	inline Vec3 & operator+=(const Vec3 & other)
 	{
 		x += other.x;
 		y += other.y;
@@ -79,7 +79,7 @@ public:
 		return *this;
 	}
 
-	Vec3 & operator-=(const Vec3 & other)
+	inline Vec3 & operator-=(const Vec3 & other)
 	{
 		x -= other.x;
 		y -= other.y;
@@ -87,7 +87,7 @@ public:
 		return *this;
 	}
 
-	Vec3 & operator*=(float a)
+	inline Vec3 & operator*=(float a)
 	{
 		x *= a;
 		y *= a;
@@ -95,7 +95,7 @@ public:
 		return *this;
 	}
 
-	Vec3 & operator/=(float a)
+	inline Vec3 & operator/=(float a)
 	{
 		x /= a;
 		y /= a;
@@ -104,27 +104,27 @@ public:
 	}
 };
 
-Vec3 operator+(const Vec3 & a, const Vec3 & b)
+inline Vec3 operator+(const Vec3 & a, const Vec3 & b)
 {
 	return {a.x+b.x, a.y+b.y, a.z+b.z};
 }
 
-Vec3 operator-(const Vec3 & a, const Vec3 & b)
+inline Vec3 operator-(const Vec3 & a, const Vec3 & b)
 {
 	return {a.x-b.x, a.y-b.y, a.z-b.z};
 }
 
-Vec3 operator*(float a, const Vec3 & v)
+inline Vec3 operator*(float a, const Vec3 & v)
 {
 	return {a*v.x, a*v.y, a*v.z};
 }
 
-Vec3 operator*(const Vec3 & v, float a)
+inline Vec3 operator*(const Vec3 & v, float a)
 {
 	return {a*v.x, a*v.y, a*v.z};
 }
 
-Vec3 operator/(const Vec3 & v, float a)
+inline Vec3 operator/(const Vec3 & v, float a)
 {
 	return {v.x/a, v.y/a, v.z/a};
 }
