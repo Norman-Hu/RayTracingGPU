@@ -15,4 +15,4 @@ public:
 	Vec3 origin, direction;
 };
 
-#endif
+#endif // RAY_H

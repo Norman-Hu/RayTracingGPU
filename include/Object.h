@@ -1,7 +1,7 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
-
+#include <vector>
 #include <Vec3.h>
 
 enum class ObjectType
