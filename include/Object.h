@@ -2,7 +2,7 @@
 #define OBJECT_H
 
 #include <vector>
-#include <Vec3.h>
+#include <Vec3.cuh>
 
 enum class ObjectType
 {

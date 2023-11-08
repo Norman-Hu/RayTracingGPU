@@ -4,8 +4,8 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <Vec3.h>
-#include <Matrix.h>
+#include <Vec3.cuh>
+#include <Matrix.cuh>
 #include <Radians.h>
 #include <vector>
 
@@ -66,9 +66,9 @@ public:
 	}
 
 	// returns the view matrix calculated using Euler Angles and the LookAt Matrix
-	std::array<float, 16> GetViewMatrix()
+	Matrix4x4 GetViewMatrix() const
 	{
-		return lookAt(Position, Position + Front, Up);
+		return Matrix4x4::lookAt(Position, Position + Front, Up);
 	}
 
 	// processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)

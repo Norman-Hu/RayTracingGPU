@@ -8,13 +8,14 @@ set(CMAKE_CUDA_STANDARD 20)
 add_subdirectory(third_party)
 
 set(SOURCES main.cu
-			include/Vec3.h
+			Vec3.cu include/Vec3.cuh
+			Vec4.cu include/Vec4.cuh
 			include/Ray.h
-			include/Matrix.h
+			Matrix.cu include/Matrix.cuh
 			include/Radians.h
 			include/Camera.h
 			include/Object.h
-			Scene.cpp include/Scene.h
+			include/Scene.h
 )
 
 add_executable(raytracer2 ${SOURCES})
