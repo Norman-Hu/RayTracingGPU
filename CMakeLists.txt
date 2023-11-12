@@ -10,12 +10,12 @@ add_subdirectory(third_party)
 set(SOURCES main.cu
 			Vec3.cu include/Vec3.cuh
 			Vec4.cu include/Vec4.cuh
-			include/Ray.h
+			include/Ray.cuh
 			Matrix.cu include/Matrix.cuh
 			include/Radians.h
 			include/Camera.h
-			include/Object.h
-			include/Scene.h
+			include/Object.cuh
+			Scene.cu include/Scene.cuh
 )
 
 add_executable(raytracer2 ${SOURCES})

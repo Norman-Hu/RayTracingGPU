@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <Matrix.cuh>
 #include <Camera.h>
+#include <Scene.cuh>
 #include <iostream>
 #include <format>
 
