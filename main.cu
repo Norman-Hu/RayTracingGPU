@@ -5,6 +5,11 @@
 #include <Scene.cuh>
 #include <iostream>
 #include <format>
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cuda_gl_interop.h>
+#include <surface_indirect_functions.h>
+#include <surface_functions.h>
 
 
 __global__ void initScene(Scene ** ptrScene)
@@ -36,6 +41,23 @@ __global__ void computeRays(unsigned int w, unsigned int h, float camNear, Matri
 	}
 }
 
+__global__ void testFillFramebuffer(unsigned int w, unsigned int h, cudaSurfaceObject_t surface)
+{
+	int x = blockDim.x * blockIdx.x + threadIdx.x;
+	int y = blockDim.y * blockIdx.y + threadIdx.y;
+	if (x<w && y<h)
+	{
+		uchar4 val = {255, 255, 0, 255};
+		surf2Dwrite<uchar4>(val, surface, (int)sizeof(uchar4)*x, y, cudaBoundaryModeClamp);
+	}
+}
+
+void destroyBuffers(unsigned int rb, unsigned int fb)
+{
+	glDeleteRenderbuffers(1, &rb);
+	glDeleteFramebuffers(1, &fb);
+}
+
 int main(int argc, char **argv)
 {
 	GLFWwindow * window;
@@ -62,6 +84,28 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	// Create buffers for rendering
+	unsigned int rb, fb;
+	glGenRenderbuffers(1, &rb);
+	glBindRenderbuffer(GL_RENDERBUFFER, rb);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, 800, 600);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	glGenFramebuffers(1, &fb);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, fb);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, rb);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	cudaGraphicsResource_t gr;
+	cudaGraphicsGLRegisterImage(&gr, rb, GL_RENDERBUFFER, cudaGraphicsRegisterFlagsSurfaceLoadStore | cudaGraphicsRegisterFlagsWriteDiscard);
+	// get cuda array : map + array references + unmap
+	cudaArray_t ar;
+	cudaGraphicsMapResources(1, &gr);
+	cudaGraphicsSubResourceGetMappedArray(&ar, gr, 0, 0);
+	cudaGraphicsUnmapResources(1, &gr);
+
+
 	Camera camera;
 
 	Matrix4x4 proj = Matrix4x4::perspective(45.0f, 800.0f/600.0f, 0.1f, 50.0f);
@@ -81,6 +125,14 @@ int main(int argc, char **argv)
 	{
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		// map cuda array
+		cudaGraphicsMapResources(1, &gr);
+
+		cudaResourceDesc resDesc{ .resType = cudaResourceTypeArray };
+		resDesc.res.array.array = ar;
+		cudaSurfaceObject_t surfObj;
+		cudaCreateSurfaceObject(&surfObj, &resDesc);
+
 		Matrix4x4 view = camera.GetViewMatrix();
 		Matrix4x4 invView;
 		Matrix4x4::invertMatrix(view, invView);
@@ -90,12 +142,26 @@ int main(int argc, char **argv)
 		computeRays<<<gridDimensions, blockDimensions>>>(800, 600, 0.1f, invViewProj, d_rayArray);
 		cudaMemcpy(h_rayArray, d_rayArray, 800*600*sizeof(Vec3), cudaMemcpyDeviceToHost);
 
+		testFillFramebuffer<<<gridDimensions, blockDimensions>>>(800, 600, surfObj);
+
+		// unmap cuda array
+		cudaGraphicsUnmapResources(1, &gr);
+
+
+
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, fb);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glBlitFramebuffer(0, 0, 800, 600, 0, 0, 800, 600, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
 	delete [] h_rayArray;
 	cudaFree(d_rayArray);
+
+	// cleanup
+	destroyBuffers(rb, fb);
 
 	glfwTerminate();
 	return 0;

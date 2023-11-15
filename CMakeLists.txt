@@ -21,7 +21,7 @@ set(SOURCES main.cu
 add_executable(raytracer2 ${SOURCES})
 set_target_properties(raytracer2 PROPERTIES
 		CUDA_SEPARABLE_COMPILATION ON
-		CUDA_ARCHITECTURES native
+		CUDA_ARCHITECTURES 75
 )
 if (MSVC)
 	target_compile_definitions(raytracer2 PRIVATE _USE_MATH_DEFINES)
