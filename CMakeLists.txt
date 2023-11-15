@@ -14,7 +14,7 @@ set(SOURCES main.cu
 			Matrix.cu include/Matrix.cuh
 			include/Radians.h
 			include/Camera.h
-			include/Object.cuh
+			Object.cu include/Object.cuh
 			Scene.cu include/Scene.cuh
 )
 
