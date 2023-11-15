@@ -13,6 +13,13 @@ __device__ Scene::Scene(Hitable ** _objectList, int _size)
 {
 }
 
+__device__ Scene::~Scene()
+{
+	for (int i=0; i<size; ++i)
+		delete objectList[i];
+	delete [] objectList;
+}
+
 __device__ bool Scene::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 {
 	bool hasHit = false;

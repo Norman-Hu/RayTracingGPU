@@ -7,6 +7,21 @@
 #include <format>
 
 
+__global__ void initScene(Scene ** ptrScene)
+{
+	*ptrScene = new Scene();
+	(*ptrScene)->size = 1;
+	(*ptrScene)->objectList = new Hitable*[1];
+	(*ptrScene)->objectList[0] = new Sphere();
+	static_cast<Sphere*>((*ptrScene)->objectList[0])->c = {5.0f, 0.0f, 0.0f};
+	static_cast<Sphere*>((*ptrScene)->objectList[0])->r = 1.0f;
+}
+
+__global__ void deleteScene(Scene * ptrScene)
+{
+	delete ptrScene;
+}
+
 __global__ void computeRays(unsigned int w, unsigned int h, float camNear, Matrix4x4 invViewProj, Vec3 * out)
 {
 	unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
