@@ -16,8 +16,6 @@ struct Hit
 class Hitable
 {
 public:
-	virtual ~Hitable() = default;
-
 	__device__ virtual bool hit(const Ray & ray, float tmin, float tmax, Hit & out) = 0;
 };
 
