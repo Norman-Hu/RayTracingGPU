@@ -1,4 +1,6 @@
 #include <Scene.cuh>
+#include <CudaHelpers.h>
+
 
 __device__ Scene::Scene()
 : objectList(nullptr)
@@ -39,4 +41,38 @@ __device__ bool Scene::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 		}
 	}
 	return hasHit;
+}
+
+// initialization and destruction
+Scene * createScene()
+{
+	Scene * d_scene;
+	cudaMalloc(&d_scene, sizeof(Scene));
+	initScene<<<1, 1>>>(d_scene);
+	syncAndCheckErrors();
+
+	return d_scene;
+}
+
+void destroyScene(Scene * d_scene)
+{
+	deleteScene<<<1, 1>>>(d_scene);
+	cudaFree(d_scene);
+	syncAndCheckErrors();
+}
+
+
+// Kernels
+__global__ void initScene(Scene * ptrScene)
+{
+	new (ptrScene) Scene(new Hitable*[1], 1);
+	auto * pSphere = new Sphere();
+	ptrScene->objectList[0] = pSphere;
+	pSphere->c = {0.0f, 0.0f, -5.0f};
+	pSphere->r = 1.0f;
+}
+
+__global__ void deleteScene(Scene * ptrScene)
+{
+	ptrScene->~Scene();
 }

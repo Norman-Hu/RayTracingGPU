@@ -8,6 +8,7 @@ set(CMAKE_CUDA_STANDARD 20)
 add_subdirectory(third_party)
 
 set(SOURCES main.cu
+			include/CudaHelpers.h
 			Vec3.cu include/Vec3.cuh
 			Vec4.cu include/Vec4.cuh
 			include/Ray.cuh
@@ -16,6 +17,7 @@ set(SOURCES main.cu
 			include/Camera.h
 			Object.cu include/Object.cuh
 			Scene.cu include/Scene.cuh
+			Rendering.cu include/Rendering.cuh
 )
 
 add_executable(raytracer2 ${SOURCES})

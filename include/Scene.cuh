@@ -2,7 +2,6 @@
 #define SCENE_H
 
 
-#include <vector>
 #include <Object.cuh>
 
 
@@ -18,5 +17,12 @@ public:
 	Hitable ** objectList;
 	int size;
 };
+
+__global__ void initScene(Scene * ptrScene);
+__global__ void deleteScene(Scene * ptrScene);
+
+Scene * createScene();
+void destroyScene(Scene * d_scene);
+
 
 #endif // SCENE_H

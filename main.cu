@@ -3,59 +3,39 @@
 #include <Matrix.cuh>
 #include <Camera.h>
 #include <Scene.cuh>
+#include <Rendering.cuh>
 #include <iostream>
 #include <format>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
-#include <surface_indirect_functions.h>
-#include <surface_functions.h>
-
-
-__global__ void initScene(Scene ** ptrScene)
-{
-	*ptrScene = new Scene();
-	(*ptrScene)->size = 1;
-	(*ptrScene)->objectList = new Hitable*[1];
-	(*ptrScene)->objectList[0] = new Sphere();
-	static_cast<Sphere*>((*ptrScene)->objectList[0])->c = {5.0f, 0.0f, 0.0f};
-	static_cast<Sphere*>((*ptrScene)->objectList[0])->r = 1.0f;
-}
-
-__global__ void deleteScene(Scene * ptrScene)
-{
-	delete ptrScene;
-}
-
-__global__ void computeRays(unsigned int w, unsigned int h, float camNear, Matrix4x4 invViewProj, Vec3 * out)
-{
-	unsigned int x = blockDim.x * blockIdx.x + threadIdx.x;
-	unsigned int y = blockDim.y * blockIdx.y + threadIdx.y;
-	float u = (float)x / (float)w;
-	float v = (float)y / (float)h;
-	Vec4 vec{2.0f*u - 1.0f, -(2.f*v - 1.f), camNear, 1.0f};
-	if (x<w && y<h)
-	{
-		vec = vec * invViewProj;
-		out[y*w+x] = Vec3{vec.x, vec.y, vec.z}/vec.w;
-	}
-}
-
-__global__ void testFillFramebuffer(unsigned int w, unsigned int h, cudaSurfaceObject_t surface)
-{
-	int x = blockDim.x * blockIdx.x + threadIdx.x;
-	int y = blockDim.y * blockIdx.y + threadIdx.y;
-	if (x<w && y<h)
-	{
-		uchar4 val = {255, 255, 0, 255};
-		surf2Dwrite<uchar4>(val, surface, (int)sizeof(uchar4)*x, y, cudaBoundaryModeClamp);
-	}
-}
+#include <CudaHelpers.h>
 
 void destroyBuffers(unsigned int rb, unsigned int fb)
 {
 	glDeleteRenderbuffers(1, &rb);
 	glDeleteFramebuffers(1, &fb);
+}
+
+// from https://gist.github.com/allanmac/4ff11985c3562830989f
+void setTitleFPS(GLFWwindow * pWindow)
+{
+	static float previousStamp = 0.0f;
+	static int count = 0;
+
+	float currentStamp = glfwGetTime();
+	float elapsed = currentStamp - previousStamp;
+
+	if (elapsed > 0.5f)
+	{
+		previousStamp = currentStamp;
+		float fps = count / elapsed;
+		int w, h;
+		glfwGetFramebufferSize(pWindow,&w,&h);
+		glfwSetWindowTitle(pWindow,std::format("({} x {}) - FPS: {:.2f}", w, h, fps).c_str());
+		count = 0;
+	}
+	count++;
 }
 
 int main(int argc, char **argv)
@@ -77,6 +57,7 @@ int main(int argc, char **argv)
 	}
 
 	glfwMakeContextCurrent(window);
+	glfwSwapInterval(0); // disable vsync
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
 	{
@@ -108,7 +89,7 @@ int main(int argc, char **argv)
 
 	Camera camera;
 
-	Matrix4x4 proj = Matrix4x4::perspective(45.0f, 800.0f/600.0f, 0.1f, 50.0f);
+	Matrix4x4 proj = Matrix4x4::perspective(radians(100), 800.0f/600.0f, 0.1f, 50.0f);
 	Matrix4x4 invProj;
 	Matrix4x4::invertMatrix(proj, invProj);
 
@@ -117,12 +98,23 @@ int main(int argc, char **argv)
 	dim3 blockDimensions(16, 16);
 	dim3 gridDimensions((800+blockDimensions.x-1) / blockDimensions.x, (600+blockDimensions.y-1) / blockDimensions.y);
 
-	Vec3 * h_rayArray = new Vec3[800*600];
-	Vec3 * d_rayArray = nullptr;
-	cudaMalloc(&d_rayArray, 800*600*sizeof(Vec3));
+	Scene * d_scene = createScene();
+
+	// debug
+	if (false)
+	{
+		Matrix4x4 view = camera.GetViewMatrix();
+		Matrix4x4 invView;
+		Matrix4x4::invertMatrix(view, invView);
+		Matrix4x4 invViewProj = invView * invProj;
+		renderStraight<<<1, 1>>>(d_scene, 0.1f, camera.Position, invViewProj);
+		syncAndCheckErrors();
+	}
 
 	while (!glfwWindowShouldClose(window))
 	{
+		setTitleFPS(window);
+
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// map cuda array
@@ -139,15 +131,11 @@ int main(int argc, char **argv)
 
 		Matrix4x4 invViewProj = invView * invProj;
 
-		computeRays<<<gridDimensions, blockDimensions>>>(800, 600, 0.1f, invViewProj, d_rayArray);
-		cudaMemcpy(h_rayArray, d_rayArray, 800*600*sizeof(Vec3), cudaMemcpyDeviceToHost);
-
-		testFillFramebuffer<<<gridDimensions, blockDimensions>>>(800, 600, surfObj);
+		render<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, invViewProj, surfObj);
+		syncAndCheckErrors();
 
 		// unmap cuda array
 		cudaGraphicsUnmapResources(1, &gr);
-
-
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, fb);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -157,10 +145,8 @@ int main(int argc, char **argv)
 		glfwPollEvents();
 	}
 
-	delete [] h_rayArray;
-	cudaFree(d_rayArray);
-
 	// cleanup
+	destroyScene(d_scene);
 	destroyBuffers(rb, fb);
 
 	glfwTerminate();
