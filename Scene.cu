@@ -65,11 +65,15 @@ void destroyScene(Scene * d_scene)
 // Kernels
 __global__ void initScene(Scene * ptrScene)
 {
-	new (ptrScene) Scene(new Hitable*[1], 1);
-	auto * pSphere = new Sphere();
+	new (ptrScene) Scene(new Hitable*[2], 2);
+	Sphere * pSphere = new Sphere();
 	ptrScene->objectList[0] = pSphere;
-	pSphere->c = {0.0f, 0.0f, -5.0f};
+	pSphere->c = {1.0f, 0.0f, -10.0f};
 	pSphere->r = 1.0f;
+	pSphere = new Sphere();
+	ptrScene->objectList[1] = pSphere;
+	pSphere->c = {-1.0f, 0.0f, -13.0f};
+	pSphere->r = 0.5f;
 }
 
 __global__ void deleteScene(Scene * ptrScene)
