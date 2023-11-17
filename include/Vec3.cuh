@@ -33,6 +33,8 @@ public:
 public:
 	__host__ __device__ static float dot(const Vec3 & a, const Vec3 & b);
 	__host__ __device__ static Vec3 cross(const Vec3 & a, const Vec3 & b);
+	__host__ __device__ static Vec3 reflect(const Vec3 & incident, const Vec3 & normal);
+	__host__ __device__ static Vec3 mix(const Vec3 & v1, const Vec3 & v2, float val);
 
 // operators
 public:
@@ -42,6 +44,7 @@ public:
 	__host__ __device__ Vec3 & operator/=(float a);
 };
 
+__host__ __device__ Vec3 operator-(const Vec3 & a);
 __host__ __device__ Vec3 operator+(const Vec3 & a, const Vec3 & b);
 __host__ __device__ Vec3 operator-(const Vec3 & a, const Vec3 & b);
 __host__ __device__ Vec3 operator*(float a, const Vec3 & v);

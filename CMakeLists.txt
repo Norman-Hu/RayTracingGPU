@@ -15,6 +15,7 @@ set(SOURCES main.cu
 			Matrix.cu include/Matrix.cuh
 			include/Radians.h
 			include/Camera.h
+			include/Material.cuh
 			Object.cu include/Object.cuh
 			Scene.cu include/Scene.cuh
 			Rendering.cu include/Rendering.cuh

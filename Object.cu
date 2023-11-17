@@ -26,5 +26,6 @@ __device__ bool Sphere::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 	out.t = root;
 	out.p = ray.origin+ray.direction*root;
 	out.normal = (out.p - this->c)/r;
+	out.materialId = materialId;
 	return true;
 }

@@ -79,6 +79,16 @@ __host__ __device__ Vec3 Vec3::cross(const Vec3 & a, const Vec3 & b)
 	};
 }
 
+__host__ __device__ Vec3 Vec3::reflect(const Vec3 & incident, const Vec3 & normal)
+{
+	return incident - 2.0f * dot(normal, incident) * normal;
+}
+
+__host__ __device__ static Vec3 mix(const Vec3 & v1, const Vec3 & v2, float val)
+{
+	return v1*(1-val) + v2*val;
+}
+
 // operators
 __host__ __device__ Vec3 & Vec3::operator+=(const Vec3 & other)
 {
@@ -113,6 +123,11 @@ __host__ __device__ Vec3 & Vec3::operator/=(float a)
 }
 
 
+
+__host__ __device__ Vec3 operator-(const Vec3 & a)
+{
+	return {-a.x, -a.y, -a.z};
+}
 
 __host__ __device__ Vec3 operator+(const Vec3 & a, const Vec3 & b)
 {

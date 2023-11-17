@@ -38,6 +38,7 @@ public:
 	__host__ __device__ Vec4 & operator/=(float a);
 };
 
+__host__ __device__ Vec4 operator-(const Vec4 & a);
 __host__ __device__ Vec4 operator+(const Vec4 & a, const Vec4 & b);
 __host__ __device__ Vec4 operator-(const Vec4 & a, const Vec4 & b);
 __host__ __device__ Vec4 operator*(float a, const Vec4 & v);

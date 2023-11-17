@@ -4,22 +4,27 @@
 
 __device__ Scene::Scene()
 : objectList(nullptr)
-, size(0)
+, objectCount(0)
+, materials(nullptr)
+, materialCount(0)
 {
 
 }
 
-__device__ Scene::Scene(Hitable ** _objectList, int _size)
+__device__ Scene::Scene(Hitable ** _objectList, int _size, BlinnPhongMaterial * _materials, int _materialCount)
 : objectList(_objectList)
-, size(_size)
+, objectCount(_size)
+, materials(_materials)
+, materialCount(_materialCount)
 {
 }
 
 __device__ Scene::~Scene()
 {
-	for (int i=0; i<size; ++i)
+	for (int i=0; i < objectCount; ++i)
 		delete objectList[i];
 	delete [] objectList;
+	delete [] materials;
 }
 
 __device__ bool Scene::hit(const Ray & ray, float tmin, float tmax, Hit & out)
@@ -28,7 +33,7 @@ __device__ bool Scene::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 	float closest_t = tmax;
 
 	Hit tmpHit;
-	for (int i=0; i<size; ++i)
+	for (int i=0; i < objectCount; ++i)
 	{
 		if (objectList[i]->hit(ray, tmin, tmax, tmpHit))
 		{
@@ -65,15 +70,30 @@ void destroyScene(Scene * d_scene)
 // Kernels
 __global__ void initScene(Scene * ptrScene)
 {
-	new (ptrScene) Scene(new Hitable*[2], 2);
+	new (ptrScene) Scene(new Hitable*[2], 2, new BlinnPhongMaterial[2], 2);
 	Sphere * pSphere = new Sphere();
 	ptrScene->objectList[0] = pSphere;
-	pSphere->c = {1.0f, 0.0f, -10.0f};
-	pSphere->r = 1.0f;
+	pSphere->c = {1.f, 0.0f, -10.0f};
+	pSphere->r = 1.f;
+	pSphere->materialId = 1;
 	pSphere = new Sphere();
 	ptrScene->objectList[1] = pSphere;
-	pSphere->c = {-1.0f, 0.0f, -13.0f};
-	pSphere->r = 0.5f;
+	pSphere->c = {-1.f, 0.0f, -10.0f};
+	pSphere->r = 1.f;
+	pSphere->materialId = 0;
+
+	BlinnPhongMaterial * mat = &ptrScene->materials[0];
+	mat->ambient = {0.1f, 0.1f, 0.1f};
+	mat->diffuse = {0.6f, 0.f, 0.f};
+	mat->specular = {1.f, 1.f, 1.f};
+	mat->shininess = 32.f;
+	mat->mirror = 0.f;
+	mat = &ptrScene->materials[1];
+	mat->ambient = {0.0f, 0.0f, 0.0f};
+	mat->diffuse = {1.f, 1.0f, 1.f};
+	mat->specular = {1.f, 1.f, 1.f};
+	mat->shininess = 32.f;
+	mat->mirror = 1.f;
 }
 
 __global__ void deleteScene(Scene * ptrScene)
