@@ -7,6 +7,8 @@ InputHandler::InputHandler(GLFWwindow * _pWindow, Camera * _pCamera)
 : pWindow(_pWindow)
 , pCamera(_pCamera)
 , cursorCaptured(false)
+, lastCurPosX(0.0f)
+, lastCurPosY(0.0f)
 {
 	if (glfwRawMouseMotionSupported())
 		glfwSetInputMode(pWindow, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
@@ -14,6 +16,8 @@ InputHandler::InputHandler(GLFWwindow * _pWindow, Camera * _pCamera)
 
 void InputHandler::handleInputs()
 {
+	constexpr float speed = 0.05f;
+
 	float vertical = 0.0f;
 	if (glfwGetKey(pWindow, GLFW_KEY_W))
 		vertical += 1.f;
@@ -32,7 +36,7 @@ void InputHandler::handleInputs()
 		vertical /= M_SQRT2;
 	}
 
-	pCamera->Position += pCamera->Front*vertical + pCamera->Right*horizontal;
+	pCamera->Position += speed*pCamera->Front*vertical + speed*pCamera->Right*horizontal;
 }
 
 void InputHandler::keyCallback(int key, int scancode, int action, int mods)
@@ -58,7 +62,11 @@ void InputHandler::cursorPosCallback(double xpos, double ypos)
 	if (!cursorCaptured)
 		return;
 
-	pCamera->ProcessMouseMovement(xpos, ypos, true);
+	float offsetX = lastCurPosX - xpos;
+	float offsetY = lastCurPosY - ypos;
+	lastCurPosX = xpos;
+	lastCurPosY = ypos;
+	pCamera->ProcessMouseMovement(offsetX, offsetY, true);
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)

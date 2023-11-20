@@ -23,6 +23,9 @@ private:
 	Camera * pCamera;
 
 	bool cursorCaptured;
+
+	float lastCurPosX;
+	float lastCurPosY;
 };
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
