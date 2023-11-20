@@ -6,6 +6,7 @@
 #include <Rendering.cuh>
 #include <iostream>
 #include <format>
+#include <InputHandler.cuh>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
@@ -95,9 +96,17 @@ int main(int argc, char **argv)
 
 	glViewport(0, 0, 800, 600);
 
+	// setup glfw callbacks
+	InputHandler handler(window, &camera);
+	glfwSetWindowUserPointer(window, &handler);
+	glfwSetKeyCallback(window, keyCallback);
+	glfwSetCursorPosCallback(window, cursorPosCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+
+	// dimensions of the render surface
 	dim3 blockDimensions(16, 16);
 	dim3 gridDimensions((800+blockDimensions.x-1) / blockDimensions.x, (600+blockDimensions.y-1) / blockDimensions.y);
-
+	// setup gpu memory
 	Scene * d_scene = createScene();
 
 	// debug
@@ -143,6 +152,7 @@ int main(int argc, char **argv)
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();
+		handler.handleInputs();
 	}
 
 	// cleanup
