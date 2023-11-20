@@ -91,8 +91,6 @@ int main(int argc, char **argv)
 	Camera camera;
 
 	Matrix4x4 proj = Matrix4x4::perspective(radians(100), 800.0f/600.0f, 0.1f, 50.0f);
-	Matrix4x4 invProj;
-	Matrix4x4::invertMatrix(proj, invProj);
 
 	glViewport(0, 0, 800, 600);
 
@@ -110,15 +108,15 @@ int main(int argc, char **argv)
 	Scene * d_scene = createScene();
 
 	// debug
-	if (false)
-	{
-		Matrix4x4 view = camera.GetViewMatrix();
-		Matrix4x4 invView;
-		Matrix4x4::invertMatrix(view, invView);
-		Matrix4x4 invViewProj = invView * invProj;
-		renderStraight<<<1, 1>>>(d_scene, 0.1f, camera.Position, invViewProj);
-		syncAndCheckErrors();
-	}
+//	if (false)
+//	{
+//		Matrix4x4 view = camera.GetViewMatrix();
+//		Matrix4x4 invView;
+//		Matrix4x4::invertMatrix(view, invView);
+//		Matrix4x4 invViewProj = invView * invProj;
+//		renderStraight<<<1, 1>>>(d_scene, 0.1f, camera.Position, invViewProj);
+//		syncAndCheckErrors();
+//	}
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -134,11 +132,9 @@ int main(int argc, char **argv)
 		cudaSurfaceObject_t surfObj;
 		cudaCreateSurfaceObject(&surfObj, &resDesc);
 
-		Matrix4x4 view = camera.GetViewMatrix();
-		Matrix4x4 invView;
-		Matrix4x4::invertMatrix(view, invView);
-
-		Matrix4x4 invViewProj = invView * invProj;
+		Matrix4x4 viewProj = camera.GetViewMatrix()*proj;
+		Matrix4x4 invViewProj;
+		Matrix4x4::invertMatrix(viewProj, invViewProj);
 
 		render<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, invViewProj, surfObj);
 		syncAndCheckErrors();
