@@ -30,6 +30,7 @@ set_target_properties(raytracer2 PROPERTIES
 if (MSVC)
 	target_compile_definitions(raytracer2 PRIVATE _USE_MATH_DEFINES)
 endif()
+target_compile_options(raytracer2 PRIVATE -Xcudafe --diag_suppress=20012)
 
 target_link_libraries(raytracer2 PRIVATE glad glfw)
 target_include_directories(raytracer2 PRIVATE include)
