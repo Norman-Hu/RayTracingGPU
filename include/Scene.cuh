@@ -22,6 +22,7 @@ public:
 };
 
 __global__ void initScene(Scene * ptrScene);
+__global__ void initCornellBox(Scene * ptrScene);
 __global__ void deleteScene(Scene * ptrScene);
 
 Scene * createScene();

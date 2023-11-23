@@ -29,3 +29,26 @@ __device__ bool Sphere::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 	out.materialId = materialId;
 	return true;
 }
+
+__device__ bool Square::hit(const Ray & ray, float tmin, float tmax, Hit & out)
+{
+	float t = Vec3::dot(p - ray.origin, n)/Vec3::dot(ray.direction, n);
+	if (t < tmin || t > tmax)
+		return false;
+
+	Vec3 inter = ray.origin + t * ray.direction;
+
+	Vec3 toIntersection = inter - p;
+	float dotRight = Vec3::dot(toIntersection, right);
+	float dotUp = Vec3::dot(toIntersection, up);
+
+	if (!(dotRight >= 0 && dotRight <= Vec3::dot(right, right) && dotUp >= 0 && dotUp <= Vec3::dot(up, up)))
+		return false;
+
+	out.t = t;
+	out.p = inter;
+	out.normal = n;
+	out.materialId = materialId;
+
+	return true;
+}

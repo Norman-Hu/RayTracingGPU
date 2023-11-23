@@ -53,7 +53,9 @@ Scene * createScene()
 {
 	Scene * d_scene;
 	cudaMalloc(&d_scene, sizeof(Scene));
-	initScene<<<1, 1>>>(d_scene);
+//	initScene<<<1, 1>>>(d_scene);
+//	initDebugScene<<<1, 1>>>(d_scene);
+	initCornellBox<<<1, 1>>>(d_scene);
 	syncAndCheckErrors();
 
 	return d_scene;
@@ -94,6 +96,54 @@ __global__ void initScene(Scene * ptrScene)
 	mat->specular = {1.f, 1.f, 1.f};
 	mat->shininess = 32.f;
 	mat->mirror = 1.f;
+}
+
+__global__ void initCornellBox(Scene * ptrScene)
+{
+	new (ptrScene) Scene(new Hitable*[8], 4, new BlinnPhongMaterial[5], 5);
+
+	// Floor
+	Square * pSquare = new Square();
+	ptrScene->objectList[0] = pSquare;
+	pSquare->p = Vec3(-1.f, -1.f, 1.f);
+	pSquare->right = Vec3(2.f, 0.f, 0.f);
+	pSquare->up = Vec3(0.f, 0.f, -2.f);
+	pSquare->n = Vec3(0.f, 1.f, 0.f);
+	pSquare->materialId = 0;
+
+	// Ceiling
+	pSquare = new Square();
+	ptrScene->objectList[1] = pSquare;
+	pSquare->p = Vec3(-1.f, 1.f, -1.f);
+	pSquare->right = Vec3(2.f, 0.f, 0.f);
+	pSquare->up = Vec3(0.f, 0.f, 2.f);
+	pSquare->n = Vec3(0.f, -1.f, 0.f);
+	pSquare->materialId = 0;
+
+	// Left wall
+	pSquare = new Square();
+	ptrScene->objectList[2] = pSquare;
+	pSquare->p = Vec3(-1.f, -1.f, 1.f);
+	pSquare->right = Vec3(0.f, 0.f, -2.f);
+	pSquare->up = Vec3(0.f, 2.f, 0.f);
+	pSquare->n = Vec3(1.f, 0.f, 0.f);
+	pSquare->materialId = 0;
+
+	// Right wall
+	pSquare = new Square();
+	ptrScene->objectList[3] = pSquare;
+	pSquare->p = Vec3(1.f, -1.f, -1.f);
+	pSquare->right = Vec3(0.f, 0.f, 2.f);
+	pSquare->up = Vec3(0.f, 2.f, 0.f);
+	pSquare->n = Vec3(-1.f, 0.f, 0.f);
+	pSquare->materialId = 0;
+	
+	BlinnPhongMaterial * mat = &ptrScene->materials[0];
+	mat->ambient = {0.1f, 0.1f, 0.1f};
+	mat->diffuse = {0.6f, 0.f, 0.f};
+	mat->specular = {1.f, 1.f, 1.f};
+	mat->shininess = 32.f;
+	mat->mirror = 0.f;
 }
 
 __global__ void deleteScene(Scene * ptrScene)

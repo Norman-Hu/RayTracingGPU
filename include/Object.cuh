@@ -32,4 +32,15 @@ public:
 	__device__ bool hit(const Ray & ray, float tmin, float tmax, Hit & out) override;
 };
 
+class Square : public Hitable
+{
+public:
+	Vec3 p;
+	Vec3 n;
+	Vec3 right;
+	Vec3 up;
+
+	__device__ bool hit(const Ray & ray, float tmin, float tmax, Hit & out) override;
+};
+
 #endif // OBJECT_H
