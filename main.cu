@@ -5,7 +5,6 @@
 #include <Scene.cuh>
 #include <Rendering.cuh>
 #include <iostream>
-#include <format>
 #include <InputHandler.cuh>
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -33,7 +32,9 @@ void setTitleFPS(GLFWwindow * pWindow)
 		float fps = count / elapsed;
 		int w, h;
 		glfwGetFramebufferSize(pWindow,&w,&h);
-		glfwSetWindowTitle(pWindow,std::format("({} x {}) - FPS: {:.2f}", w, h, fps).c_str());
+		char tmp[64];
+      	sprintf(tmp,"(%u x %u) - FPS: %.2f",w,h,fps);
+		glfwSetWindowTitle(pWindow, tmp);
 		count = 0;
 	}
 	count++;
@@ -117,7 +118,8 @@ int main(int argc, char **argv)
 		// map cuda array
 		cudaGraphicsMapResources(1, &gr);
 
-		cudaResourceDesc resDesc{ .resType = cudaResourceTypeArray };
+		cudaResourceDesc resDesc;
+		resDesc.resType = cudaResourceTypeArray;
 		resDesc.res.array.array = ar;
 		cudaSurfaceObject_t surfObj;
 		cudaCreateSurfaceObject(&surfObj, &resDesc);
