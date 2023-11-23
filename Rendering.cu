@@ -1,6 +1,5 @@
 #include <Rendering.cuh>
 #include <surface_indirect_functions.h>
-#include <cstdio>
 
 
 __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface)
@@ -82,22 +81,23 @@ __global__ void testFillFramebuffer(unsigned int w, unsigned int h, cudaSurfaceO
 	}
 }
 
-__global__ void renderStraight(Scene * scene, float camNear, Vec3 camPos, Matrix4x4 invViewProj)
+__global__ void renderStraight(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface)
 {
-	float u = 0.5f;
-	float v = 0.5f;
-	Vec4 vec{2.0f*u - 1.0f, -(2.f*v - 1.f), camNear, 1.0f};
-	vec = vec * invViewProj;
-	Vec3 dir = Vec3{vec[0], vec[1], vec[2]}/vec[3];
+	float x = w/2.0f;
+	float y = h/2.0f;
+	float ndc_x = (2.f*(float)x / (float)w)-1.f;
+	float ndc_y = 1.f - (2.f*(float)y / (float)h);
+	Vec4 vec{ndc_x, ndc_y, camNear, 1.f};
+	vec = rayTransform*vec;
+	Vec3 dir = Vec3{vec[0], vec[1], vec[2]};
+	dir.normalize();
+
+	Ray ray{camPos, dir.normalized()};
 
 	Hit out;
 	uchar4 val;
-	if (scene->hit({camPos, dir}, 0.1f, 50.0f, out))
+	if (scene->hit(ray, 0.1f, 50.0f, out))
 	{
 		val = {255, 0, 0, 255};
-	}
-	else
-	{
-		val = {0, 0, 0, 255};
 	}
 }

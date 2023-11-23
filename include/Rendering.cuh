@@ -10,6 +10,6 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 
 // debug
 __global__ void testFillFramebuffer(unsigned int w, unsigned int h, cudaSurfaceObject_t surface);
-__global__ void renderStraight(Scene * scene, float camNear, Vec3 camPos, Matrix4x4 invViewProj);
+__global__ void renderStraight(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface);
 
 #endif // RENDERING_H
