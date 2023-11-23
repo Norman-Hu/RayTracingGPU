@@ -54,6 +54,11 @@ void InputHandler::mouseButtonCallback(int button, int action, int mods)
 	{
 		cursorCaptured = true;
 		glfwSetInputMode(pWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+		double x, y;
+		glfwGetCursorPos(pWindow, &x, &y);
+		lastCurPosX = x;
+		lastCurPosY = y;
 	}
 }
 
@@ -62,11 +67,11 @@ void InputHandler::cursorPosCallback(double xpos, double ypos)
 	if (!cursorCaptured)
 		return;
 
-	float offsetX = lastCurPosX - xpos;
-	float offsetY = lastCurPosY - ypos;
+	float offsetX = xpos - lastCurPosX;
+	float offsetY = ypos - lastCurPosY;
 	lastCurPosX = xpos;
 	lastCurPosY = ypos;
-	pCamera->ProcessMouseMovement(offsetX, offsetY, true);
+	pCamera->ProcessMouseMovement(offsetX, -offsetY, true);
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)

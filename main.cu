@@ -89,8 +89,9 @@ int main(int argc, char **argv)
 
 
 	Camera camera;
-
-	Matrix4x4 proj = Matrix4x4::perspective(radians(100), 800.0f/600.0f, 0.1f, 50.0f);
+	Matrix4x4 proj = Matrix4x4::perspective(radians(90), 800.0f/600.0f, 0.1f, 50.0f);
+	Matrix4x4 invProj;
+	Matrix4x4::invertMatrix(proj, invProj);
 
 	glViewport(0, 0, 800, 600);
 
@@ -107,17 +108,6 @@ int main(int argc, char **argv)
 	// setup gpu memory
 	Scene * d_scene = createScene();
 
-	// debug
-//	if (false)
-//	{
-//		Matrix4x4 view = camera.GetViewMatrix();
-//		Matrix4x4 invView;
-//		Matrix4x4::invertMatrix(view, invView);
-//		Matrix4x4 invViewProj = invView * invProj;
-//		renderStraight<<<1, 1>>>(d_scene, 0.1f, camera.Position, invViewProj);
-//		syncAndCheckErrors();
-//	}
-
 	while (!glfwWindowShouldClose(window))
 	{
 		setTitleFPS(window);
@@ -132,11 +122,9 @@ int main(int argc, char **argv)
 		cudaSurfaceObject_t surfObj;
 		cudaCreateSurfaceObject(&surfObj, &resDesc);
 
-		Matrix4x4 viewProj = camera.GetViewMatrix()*proj;
-		Matrix4x4 invViewProj;
-		Matrix4x4::invertMatrix(viewProj, invViewProj);
+		Matrix4x4 rayTransform = invProj * camera.GetViewMatrix();
 
-		render<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, invViewProj, surfObj);
+		render<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, rayTransform, surfObj);
 		syncAndCheckErrors();
 
 		// unmap cuda array
@@ -144,7 +132,7 @@ int main(int argc, char **argv)
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, fb);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		glBlitFramebuffer(0, 0, 800, 600, 0, 0, 800, 600, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+		glBlitFramebuffer(0, 0, 800, 600, 0, 600, 800, 0, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
 		glfwSwapBuffers(window);
 		glfwPollEvents();

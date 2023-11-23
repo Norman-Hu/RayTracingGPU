@@ -3,28 +3,28 @@
 #include <cstdio>
 
 
-__global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 invViewProj, cudaSurfaceObject_t surface)
+__global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface)
 {
 	int x = blockDim.x * blockIdx.x + threadIdx.x;
 	int y = blockDim.y * blockIdx.y + threadIdx.y;
 	if (x<w && y<h)
 	{
-		float u = (float)x / (float)w;
-		float v = (float)y / (float)h;
-		Vec4 vec{2.0f*u - 1.0f, -(2.f*v - 1.f), camNear, 1.0f};
-		vec = vec * invViewProj;
-		Vec3 dir = Vec3{vec[0], vec[1], vec[2]}/vec[3];
-
+		float ndc_x = (2.f*(float)x / (float)w)-1.f;
+		float ndc_y = 1.f - (2.f*(float)y / (float)h);
+		Vec4 vec{ndc_x, ndc_y, camNear, 1.f};
+		vec = rayTransform*vec;
+		Vec3 dir = Vec3{vec[0], vec[1], vec[2]};
+		dir.normalize();
 
 		Ray ray{camPos, dir.normalized()};
-		constexpr int maxBounces = 3;
 
 		Vec3 directionalLight{-0.5f, -0.5f, -0.5f};
 		directionalLight.normalize();
 
 		Vec3 color(1.0f, 1.0f, 1.0f);
+		constexpr int maxBounces = 10;
 
-		for (int i=0; i<5; ++i)
+		for (int i=0; i<maxBounces; ++i)
 		{
 			Hit hitInfo;
 			bool hit = scene->hit(ray, 0.1f, 50.0f, hitInfo);
@@ -43,8 +43,6 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 					Vec3 viewDir = (-ray.direction).normalized();
 					Vec3 halfDir = (lightDir+viewDir).normalized();
 					float spec = powf(max(Vec3::dot(hitInfo.normal, halfDir), 0.0f), mat.shininess);
-					if (spec > 1.0f)
-						printf("%f\n", spec);
 					Vec3 specular = spec * mat.specular;
 
 					Vec3 res = mat.ambient + diffuse + specular;

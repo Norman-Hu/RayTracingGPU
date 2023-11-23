@@ -38,11 +38,11 @@ __host__ __device__ float * Matrix4x4::data()
 __host__ __device__ Matrix4x4 Matrix4x4::lookAt(const Vec3 & eye, const Vec3 & center, const Vec3 & up)
 {
 	const Vec3 f((center - eye).normalized());
-	const Vec3 s((Vec3::cross(f, up)).normalized());
+	const Vec3 s(Vec3::cross(f, up).normalized());
 	const Vec3 u(Vec3::cross(s, f));
 
 	Matrix4x4 res;
-	res[0][0] = res[1][1] = res[2][2] = res[3][3] = 1.0f; // identity
+	res[3][3] = 1.0f; // identity
 
 	res[0][0] = s.x;
 	res[1][0] = s.y;
@@ -50,12 +50,13 @@ __host__ __device__ Matrix4x4 Matrix4x4::lookAt(const Vec3 & eye, const Vec3 & c
 	res[0][1] = u.x;
 	res[1][1] = u.y;
 	res[2][1] = u.z;
-	res[0][2] =-f.x;
-	res[1][2] =-f.y;
-	res[2][2] =-f.z;
-	res[3][0] =-Vec3::dot(s, eye);
-	res[3][1] =-Vec3::dot(u, eye);
+	res[0][2] = -f.x;
+	res[1][2] = -f.y;
+	res[2][2] = -f.z;
+	res[3][0] = -Vec3::dot(s, eye);
+	res[3][1] = -Vec3::dot(u, eye);
 	res[3][2] = Vec3::dot(f, eye);
+
 	return res;
 }
 
