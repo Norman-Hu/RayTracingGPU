@@ -89,6 +89,14 @@ __host__ __device__ Vec3 Vec3::reflect(const Vec3 & incident, const Vec3 & norma
 	return incident - 2.0f * dot(normal, incident) * normal;
 }
 
+__host__ __device__ Vec3 Vec3::refract(const Vec3 & incident, const Vec3 & normal, float ratio)
+{
+	auto cos_theta = fmin(dot(-incident, normal), 1.0f);
+	Vec3 r_out_perp = ratio * (incident + cos_theta * normal);
+	Vec3 r_out_parallel = -sqrt(fabs(1.0f - r_out_perp.sqLength())) * normal;
+	return r_out_perp + r_out_parallel;
+}
+
 __host__ __device__ static Vec3 mix(const Vec3 & v1, const Vec3 & v2, float val)
 {
 	return v1*(1-val) + v2*val;

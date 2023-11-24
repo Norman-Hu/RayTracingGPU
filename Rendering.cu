@@ -35,6 +35,24 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 				if (mat.mirror > 0.f)
 					ray = {hitInfo.p, Vec3::reflect(ray.direction, hitInfo.normal)};
 				else
+				if (mat.refraction)
+				{
+					Vec3 incident = ray.direction;
+					Vec3 normal;
+					float ratio;
+					if (Vec3::dot(ray.direction, hitInfo.normal) > 0.0f)
+					{
+						normal = -1.f * hitInfo.normal;
+						ratio = mat.refractiveIndex;
+					}
+					else
+					{
+						ratio = 1.f / mat.refractiveIndex;
+						normal = hitInfo.normal;
+					}
+					ray = {hitInfo.p, Vec3::refract(incident, normal, ratio).normalized()};
+				}
+				else
 				{
 					int lightHits = 0;
 					for (int l=0; l<lightsCount; l++)

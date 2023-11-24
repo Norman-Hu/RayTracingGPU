@@ -12,8 +12,10 @@ struct BlinnPhongMaterial
 	Vec3 specular;
 	float shininess;
 
+	bool refraction;
+
 	float mirror;
-	float glass;
+	float refractiveIndex;
 };
 
 #endif // MATERIAL_H

@@ -106,7 +106,7 @@ __global__ void initScene(Scene * ptrScene)
 
 __global__ void initCornellBox(Scene * ptrScene)
 {
-	new (ptrScene) Scene(new Hitable*[8], 8, new Light*[2], 2, new BlinnPhongMaterial[4], 4);
+	new (ptrScene) Scene(new Hitable*[8], 8, new Light*[2], 2, new BlinnPhongMaterial[5], 5);
 
 	PointLight * light = new PointLight;
 	ptrScene->lights[0] = light;
@@ -184,7 +184,7 @@ __global__ void initCornellBox(Scene * ptrScene)
     ptrScene->objectList[6] = pSphere;
     pSphere->c = Vec3(-.5f, -.7f, -2.f);
     pSphere->r = .3f;
-    pSphere->materialId = 0;
+    pSphere->materialId = 4;
 
     // Right sphere
     pSphere = new Sphere();
@@ -226,6 +226,15 @@ __global__ void initCornellBox(Scene * ptrScene)
     mat->specular = {1.f, 1.f, 1.f};
     mat->shininess = 32.f;
     mat->mirror = 1.f;
+
+	// Glass
+	mat = &ptrScene->materials[4];
+	mat->ambient = {0.f, 0.f, 0.f};
+	mat->diffuse = {1.f, 1.f, 1.f};
+	mat->specular = {1.f, 1.f, 1.f};
+	mat->shininess = 32.f;
+	mat->refraction = true;
+	mat->refractiveIndex = 1.52f;
 }
 
 __global__ void deleteScene(Scene * ptrScene)
