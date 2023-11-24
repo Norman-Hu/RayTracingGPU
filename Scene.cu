@@ -102,10 +102,10 @@ __global__ void initScene(Scene * ptrScene)
 
 __global__ void initCornellBox(Scene * ptrScene)
 {
-	new (ptrScene) Scene(new Hitable*[7], 7, new Vec3[1], 1, new BlinnPhongMaterial[4], 4);
+	new (ptrScene) Scene(new Hitable*[8], 8, new Vec3[1], 1, new BlinnPhongMaterial[4], 4);
 
 	Vec3 * light = &ptrScene->pointLights[0];
-	* light = Vec3(-0.5f, -0.5f, -0.5f);
+	* light = Vec3(0.f, .75f, -1.5f);
 
 	// Floor
 	Square * pSquare = new Square();
@@ -152,16 +152,25 @@ __global__ void initCornellBox(Scene * ptrScene)
     pSquare->n = Vec3(0.f, 0.f, 1.f);
     pSquare->materialId = 0;
 
+    // Front Wall
+    pSquare = new Square();
+    ptrScene->objectList[5] = pSquare;
+    pSquare->p = Vec3(1.f, -1.f, -1.f);
+    pSquare->right = Vec3(-2.f, 0.f, 0.f);
+    pSquare->up = Vec3(0.f, 2.f, 0.f);
+    pSquare->n = Vec3(0.f, 0.f, -1.f);
+    pSquare->materialId = 0;
+
     // Left sphere
     Sphere * pSphere = new Sphere();
-    ptrScene->objectList[5] = pSphere;
+    ptrScene->objectList[6] = pSphere;
     pSphere->c = Vec3(-.5f, -.7f, -2.f);
     pSphere->r = .3f;
     pSphere->materialId = 0;
 
     // Right sphere
     pSphere = new Sphere();
-    ptrScene->objectList[6] = pSphere;
+    ptrScene->objectList[7] = pSphere;
     pSphere->c = Vec3(.5f, -.7f, -2.f);
     pSphere->r = .3f;
     pSphere->materialId = 3;
