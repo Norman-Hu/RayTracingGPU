@@ -32,6 +32,9 @@ __device__ bool Sphere::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 
 __device__ bool Square::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 {
+    if (Vec3::dot(ray.direction, n) > 0.f)
+        return false;
+
 	float t = Vec3::dot(p - ray.origin, n)/Vec3::dot(ray.direction, n);
 	if (t < tmin || t > tmax)
 		return false;
