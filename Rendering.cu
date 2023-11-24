@@ -31,7 +31,7 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 			for (int i=0; i<maxBounces; ++i)
 			{
 				Hit hitInfo;
-				bool hit = scene->hit(ray, 0.1f, 50.0f, hitInfo);
+				bool hit = scene->hit(ray, 0.001f, 50.0f, hitInfo);
 				if (hit)
 				{
 					BlinnPhongMaterial & mat = scene->materials[hitInfo.materialId];
