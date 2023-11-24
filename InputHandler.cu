@@ -30,13 +30,19 @@ void InputHandler::handleInputs()
 	if (glfwGetKey(pWindow, GLFW_KEY_D))
 		horizontal += 1.f;
 
-	if (horizontal != 0.0f && vertical != 0.0f)
-	{
-		horizontal /= M_SQRT2;
-		vertical /= M_SQRT2;
-	}
+    float up_down = 0.0f;
+    if (glfwGetKey(pWindow, GLFW_KEY_Q))
+        up_down -= 1.f;
+    if (glfwGetKey(pWindow, GLFW_KEY_E))
+        up_down += 1.f;
 
-	pCamera->Position += speed*pCamera->Front*vertical + speed*pCamera->Right*horizontal;
+    if (vertical != 0.0f || horizontal != 0.0f || up_down != 0.0f)
+    {
+        Vec3 movement = pCamera->Front*vertical + pCamera->Right*horizontal + pCamera->WorldUp*up_down;
+        movement.normalize();
+        movement *= speed;
+        pCamera->Position += movement;
+    }
 }
 
 void InputHandler::keyCallback(int key, int scancode, int action, int mods)
