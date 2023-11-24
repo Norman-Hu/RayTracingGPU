@@ -10,6 +10,8 @@
 #include <cuda_runtime.h>
 #include <cuda_gl_interop.h>
 #include <CudaHelpers.h>
+#include <curand.h>
+#include <curand_kernel.h>
 
 void destroyBuffers(unsigned int rb, unsigned int fb)
 {
@@ -107,7 +109,11 @@ int main(int argc, char **argv)
 	dim3 blockDimensions(16, 16);
 	dim3 gridDimensions((800+blockDimensions.x-1) / blockDimensions.x, (600+blockDimensions.y-1) / blockDimensions.y);
 	// setup gpu memory
+	int threadCount = gridDimensions.x*blockDimensions.x*gridDimensions.y*blockDimensions.y;
 	Scene * d_scene = createScene();
+	curandState_t * randState;
+	cudaMalloc(&randState, threadCount * sizeof(curandState_t));
+	setupRandomState<<<gridDimensions, blockDimensions>>>(randState, time(nullptr));
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -126,7 +132,7 @@ int main(int argc, char **argv)
 
 		Matrix4x4 rayTransform = invProj * camera.GetViewMatrix();
 
-		render<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, rayTransform, surfObj);
+		render<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, rayTransform, surfObj, randState);
 		syncAndCheckErrors();
 
 		// unmap cuda array
@@ -144,6 +150,7 @@ int main(int argc, char **argv)
 	// cleanup
 	destroyScene(d_scene);
 	destroyBuffers(rb, fb);
+	cudaFree(randState);
 
 	glfwTerminate();
 	return 0;

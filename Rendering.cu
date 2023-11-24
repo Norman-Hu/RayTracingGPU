@@ -1,8 +1,9 @@
 #include <Rendering.cuh>
 #include <surface_indirect_functions.h>
+#include <cstdio>
 
 
-__global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface)
+__global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState)
 {
 	int x = blockDim.x * blockIdx.x + threadIdx.x;
 	int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -35,12 +36,21 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 					ray = {hitInfo.p, Vec3::reflect(ray.direction, hitInfo.normal)};
 				else
 				{
+					int lightHits = 0;
 					for (int l=0; l<lightsCount; l++)
 					{
 						Vec3 pointLight = scene->pointLights[l];
 
 						Vec3 lightDir = (pointLight - hitInfo.p);
+						float lightDistance = lightDir.length();
 						lightDir.normalize();
+
+						// check if obstructed
+						Hit _unused;
+						if (scene->hit({hitInfo.p, lightDir}, 0.001f, lightDistance, _unused))
+							continue;
+
+						++lightHits;
 
 						float diff = max(Vec3::dot(hitInfo.normal, lightDir), 0.0f);
 						Vec3 diffuse = mat.diffuse * diff;
@@ -53,7 +63,8 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 						Vec3 res = mat.ambient + diffuse + specular;
 						color += res;
 					}
-					color /= lightsCount;
+					if (lightHits > 0)
+						color /= lightHits;
 					break;
 				}
 			}
@@ -71,6 +82,32 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 		// the error on the next line is a lie
 		surf2Dwrite<uchar4>(val, surface, (int)sizeof(uchar4)*x, y, cudaBoundaryModeClamp);
 	}
+}
+
+__global__ void setupRandomState(curandState_t * state, uint64_t seed)
+{
+	int tid = gridDim.x*blockDim.x*(blockDim.y*blockIdx.y+threadIdx.y) + blockDim.x * blockIdx.x + threadIdx.x;
+	curand_init(seed, tid, 0, &state[tid]);
+}
+
+__device__ float randUniform(curandState_t * state)
+{
+	int tid = gridDim.x*blockDim.x*(blockDim.y*blockIdx.y+threadIdx.y) + blockDim.x * blockIdx.x + threadIdx.x;
+	return curand_uniform(state);
+}
+
+__device__ Vec3 randomInSphere(curandState_t * state)
+{
+	constexpr float pi = 3.14159265358979323846f;
+	float pitch = randUniform(state)*pi*2.f;
+	float yaw = randUniform(state)*pi*2.f;
+	Vec3 res;
+	res.x = cosf(yaw) * cosf(pitch);
+	res.y = sinf(pitch);
+	res.z = sinf(yaw) * cosf(pitch);
+	res.normalize();
+	float distance = sqrt(randUniform(state));
+	return res*distance;
 }
 
 __global__ void testFillFramebuffer(unsigned int w, unsigned int h, cudaSurfaceObject_t surface)
