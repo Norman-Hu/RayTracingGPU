@@ -187,7 +187,7 @@ __global__ void initCornellBox(Scene * ptrScene)
     // Green
     mat = &ptrScene->materials[2];
     mat->ambient = {0.f, 0.f, 0.f};
-    mat->diffuse = {0.f, 0.f, .6f};
+    mat->diffuse = {0.f, .6f, 0.f};
     mat->specular = {1.f, 1.f, 1.f};
     mat->shininess = 32.f;
     mat->mirror = 0.f;
