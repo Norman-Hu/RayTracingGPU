@@ -5,17 +5,19 @@
 __device__ Scene::Scene()
 : objectList(nullptr)
 , objectCount(0)
+, lights(nullptr)
+, lightCount(0)
 , materials(nullptr)
 , materialCount(0)
 {
 
 }
 
-__device__ Scene::Scene(Hitable ** _objectList, int _size, Vec3 * _pointLights, int _pointLightsCount, BlinnPhongMaterial * _materials, int _materialCount)
+__device__ Scene::Scene(Hitable ** _objectList, int _size, Light ** _lights, int _lightCount, BlinnPhongMaterial * _materials, int _materialCount)
 : objectList(_objectList)
 , objectCount(_size)
-, pointLights(_pointLights)
-, pointLightsCount(_pointLightsCount)
+, lights(_lights)
+, lightCount(_lightCount)
 , materials(_materials)
 , materialCount(_materialCount)
 {
@@ -26,7 +28,9 @@ __device__ Scene::~Scene()
 	for (int i=0; i < objectCount; ++i)
 		delete objectList[i];
 	delete [] objectList;
-	delete [] pointLights;
+	for (int i=0; i < lightCount; ++i)
+		delete lights[i];
+	delete [] lights;
 	delete [] materials;
 }
 
@@ -74,7 +78,7 @@ void destroyScene(Scene * d_scene)
 // Kernels
 __global__ void initScene(Scene * ptrScene)
 {
-	new (ptrScene) Scene(new Hitable*[2], 2, new Vec3[1], 1, new BlinnPhongMaterial[2], 2);
+	new (ptrScene) Scene(new Hitable*[2], 2, new Light*[0], 0, new BlinnPhongMaterial[2], 2);
 	Sphere * pSphere = new Sphere();
 	ptrScene->objectList[0] = pSphere;
 	pSphere->c = {1.f, 0.0f, -10.0f};
@@ -102,10 +106,18 @@ __global__ void initScene(Scene * ptrScene)
 
 __global__ void initCornellBox(Scene * ptrScene)
 {
-	new (ptrScene) Scene(new Hitable*[8], 8, new Vec3[1], 1, new BlinnPhongMaterial[4], 4);
+	new (ptrScene) Scene(new Hitable*[8], 8, new Light*[1], 1, new BlinnPhongMaterial[4], 4);
 
-	Vec3 * light = &ptrScene->pointLights[0];
-	* light = Vec3(0.f, .75f, -1.5f);
+	PointLight * light = new PointLight;
+	ptrScene->lights[0] = light;
+	light->p = {0.f, .75f, -1.5f};
+
+//	AreaLight * light = new AreaLight;
+//	ptrScene->lights[0] = light;
+//	light->p = {-0.5f, .75f, -1.75f};
+//	light->n = {0.f, -1.f, 0.f};
+//	light->right = {1.f, 0.f, 0.f};
+//	light->up = {0.f, 0.f, -.5f};
 
 	// Floor
 	Square * pSquare = new Square();

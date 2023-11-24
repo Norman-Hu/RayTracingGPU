@@ -20,6 +20,7 @@ set(SOURCES main.cu
 			Scene.cu include/Scene.cuh
 			Rendering.cu include/Rendering.cuh
 			InputHandler.cu include/InputHandler.cuh
+			Light.cu include/Light.cuh
 )
 
 add_executable(raytracer2 ${SOURCES})
