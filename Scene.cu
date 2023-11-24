@@ -106,11 +106,17 @@ __global__ void initScene(Scene * ptrScene)
 
 __global__ void initCornellBox(Scene * ptrScene)
 {
-	new (ptrScene) Scene(new Hitable*[8], 8, new Light*[1], 1, new BlinnPhongMaterial[4], 4);
+	new (ptrScene) Scene(new Hitable*[8], 8, new Light*[2], 2, new BlinnPhongMaterial[4], 4);
 
 	PointLight * light = new PointLight;
 	ptrScene->lights[0] = light;
 	light->p = {0.f, .75f, -1.5f};
+	light->color = {.5f, .9f, .5f};
+
+	light = new PointLight;
+	ptrScene->lights[1] = light;
+	light->p = {.9f, .9f, -1.1f};
+	light->color = {1.f, .7f, .1f};
 
 //	AreaLight * light = new AreaLight;
 //	ptrScene->lights[0] = light;

@@ -65,6 +65,11 @@ __host__ __device__ const float & Vec3::operator[](unsigned int i) const
 	}
 }
 
+__host__ __device__ Vec3 Vec3::mulComp(const Vec3 & other) const
+{
+	return {x*other.x, y*other.y, z*other.z};
+}
+
 // static
 __host__ __device__ float Vec3::dot(const Vec3 & a, const Vec3 & b)
 {

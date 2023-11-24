@@ -20,6 +20,8 @@ class Light
 public:
 	__device__ virtual ~Light() {};
 	__device__ virtual LightSamples getSamples(curandState_t * state) = 0;
+
+	Vec3 color;
 };
 
 class PointLight : public Light

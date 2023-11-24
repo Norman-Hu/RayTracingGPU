@@ -26,6 +26,7 @@ public:
 	__host__ __device__ float & operator[](unsigned int i);
 	__host__ __device__ const float & operator[](unsigned int i) const;
 
+	__host__ __device__ Vec3 mulComp(const Vec3 & other) const;
 public:
 	float x, y, z;
 

@@ -69,7 +69,7 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 							Vec3 specular = spec * mat.specular;
 
 							Vec3 res = mat.ambient + diffuse + specular;
-							colorForLight += res;
+							colorForLight += res.mulComp(light->color);
 						}
 						if (sampleHits > 0)
 						{
