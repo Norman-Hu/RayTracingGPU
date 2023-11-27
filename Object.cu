@@ -13,7 +13,7 @@ __device__ bool Sphere::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 	{
 		return false;
 	}
-	float sqrtDelta = sqrt(delta);
+	float sqrtDelta = sqrtf(delta);
 
 	float root = (-b-sqrtDelta/a);
 	if (root < tmin || root > tmax)

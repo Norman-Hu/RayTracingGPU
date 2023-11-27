@@ -17,7 +17,7 @@ __host__ __device__ Vec4::Vec4(const Vec4 & other)
 }
 
 __host__ __device__ float Vec4::sqLength() const {return x*x+y*y+z*z+w*w;}
-__host__ __device__ float Vec4::length() const {return std::sqrt(sqLength());};
+__host__ __device__ float Vec4::length() const {return sqrtf(sqLength());};
 
 __host__ __device__ void Vec4::normalize()
 {

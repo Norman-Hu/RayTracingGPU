@@ -139,7 +139,7 @@ __device__ Vec3 randomInSphere(curandState_t * state)
 	res.y = sinf(pitch);
 	res.z = sinf(yaw) * cosf(pitch);
 	res.normalize();
-	float distance = sqrt(randUniform(state));
+	float distance = sqrtf(randUniform(state));
 	return res*distance;
 }
 

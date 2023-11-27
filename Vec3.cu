@@ -18,7 +18,7 @@ __host__ __device__ Vec3::Vec3(const Vec3 & other)
 }
 
 __host__ __device__ float Vec3::sqLength() const {return x*x+y*y+z*z;}
-__host__ __device__ float Vec3::length() const {return std::sqrt(sqLength());};
+__host__ __device__ float Vec3::length() const {return sqrtf(sqLength());};
 
 __host__ __device__ void Vec3::normalize()
 {
@@ -93,7 +93,7 @@ __host__ __device__ Vec3 Vec3::refract(const Vec3 & incident, const Vec3 & norma
 {
 	auto cos_theta = fmin(dot(-incident, normal), 1.0f);
 	Vec3 r_out_perp = ratio * (incident + cos_theta * normal);
-	Vec3 r_out_parallel = -sqrt(fabs(1.0f - r_out_perp.sqLength())) * normal;
+	Vec3 r_out_parallel = -sqrtf(fabs(1.0f - r_out_perp.sqLength())) * normal;
 	return r_out_perp + r_out_parallel;
 }
 
