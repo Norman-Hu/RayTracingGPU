@@ -12,6 +12,8 @@
 #include <CudaHelpers.h>
 #include <curand.h>
 #include <curand_kernel.h>
+#include <Importer.cuh>
+
 
 void destroyBuffers(unsigned int rb, unsigned int fb)
 {
@@ -92,7 +94,7 @@ int main(int argc, char **argv)
 
 
 	Camera camera;
-	Matrix4x4 proj = Matrix4x4::perspective(radians(90), 800.0f/600.0f, 0.1f, 50.0f);
+	Matrix4x4 proj = Matrix4x4::perspective(radians(120), 800.0f/600.0f, 0.1f, 50.0f);
 	Matrix4x4 invProj;
 	Matrix4x4::invertMatrix(proj, invProj);
 
@@ -109,8 +111,11 @@ int main(int argc, char **argv)
 	dim3 blockDimensions(16, 16);
 	dim3 gridDimensions((800+blockDimensions.x-1) / blockDimensions.x, (600+blockDimensions.y-1) / blockDimensions.y);
 	// setup gpu memory
+
 	int threadCount = gridDimensions.x*blockDimensions.x*gridDimensions.y*blockDimensions.y;
-	Scene * d_scene = createScene();
+	Scene * d_scene = importSceneToGPU("scenes/cornell-light-lowpoly.glb");
+	syncAndCheckErrors();
+
 	curandState_t * randState;
 	cudaMalloc(&randState, threadCount * sizeof(curandState_t));
 	setupRandomState<<<gridDimensions, blockDimensions>>>(randState, time(nullptr));

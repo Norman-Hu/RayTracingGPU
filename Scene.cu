@@ -13,7 +13,7 @@ __device__ Scene::Scene()
 
 }
 
-__device__ Scene::Scene(Hitable ** _objectList, int _size, Light ** _lights, int _lightCount, BlinnPhongMaterial * _materials, int _materialCount)
+__device__ Scene::Scene(Hitable ** _objectList, int _size, Light ** _lights, int _lightCount, PBRMaterial * _materials, int _materialCount)
 : objectList(_objectList)
 , objectCount(_size)
 , lights(_lights)
@@ -55,186 +55,102 @@ __device__ bool Scene::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 	return hasHit;
 }
 
-// initialization and destruction
+// helpers
 Scene * createScene()
 {
 	Scene * d_scene;
 	cudaMalloc(&d_scene, sizeof(Scene));
+	d_createScene<<<1, 1>>>(d_scene);
 //	initScene<<<1, 1>>>(d_scene);
-	initCornellBox<<<1, 1>>>(d_scene);
+//	initCornellBox<<<1, 1>>>(d_scene);
 	syncAndCheckErrors();
 
 	return d_scene;
 }
 
+__global__ void d_createScene(Scene * ptr)
+{
+	new (ptr) Scene();
+}
+
+void setHitableCount(Scene * d_scene, unsigned int count)
+{
+	d_setHitableCount<<<1, 1>>>(d_scene, count);
+}
+
+__global__ void d_setHitableCount(Scene * d_scene, unsigned int count)
+{
+	for (int i=0; i < d_scene->objectCount; ++i)
+		delete d_scene->objectList[i];
+	delete [] d_scene->objectList;
+
+	d_scene->objectList = new Hitable*[count];
+	d_scene->objectCount = count;
+}
+
+void setHitable(Scene * d_scene, unsigned int id, Hitable * hitable)
+{
+	d_setHitable<<<1, 1>>>(d_scene, id, hitable);
+}
+
+__global__ void d_setHitable(Scene * d_scene, unsigned int id, Hitable * hitable)
+{
+	d_scene->objectList[id] = hitable;
+}
+
+void setLightCount(Scene * d_scene, unsigned int count)
+{
+	d_setLightCount<<<1, 1>>>(d_scene, count);
+}
+
+__global__ void d_setLightCount(Scene * d_scene, unsigned int count)
+{
+	for (int i=0; i < d_scene->lightCount; ++i)
+		delete d_scene->lights[i];
+	delete [] d_scene->lights;
+
+	d_scene->lights = new Light*[count];
+	d_scene->lightCount = count;
+}
+
+void setLight(Scene * d_scene, unsigned int id, Light * light)
+{
+	d_setLight<<<1, 1>>>(d_scene, id, light);
+}
+
+__global__ void d_setLight(Scene * d_scene, unsigned int id, Light * light)
+{
+	d_scene->lights[id] = light;
+}
+
+void setMaterialCount(Scene * d_scene, unsigned int count)
+{
+	d_setMaterialCount<<<1, 1>>>(d_scene, count);
+}
+
+__global__ void d_setMaterialCount(Scene * d_scene, unsigned int count)
+{
+	delete [] d_scene->materials;
+	d_scene->materials = new PBRMaterial[count];
+	d_scene->materialCount = count;
+}
+
+void setMaterial(Scene * d_scene, unsigned int id, const PBRMaterial & material)
+{
+	d_setMaterial<<<1, 1>>>(d_scene, id, material);
+}
+
+__global__ void d_setMaterial(Scene * d_scene, unsigned int id, PBRMaterial material)
+{
+	d_scene->materials[id] = material;
+}
+
 void destroyScene(Scene * d_scene)
 {
 	deleteScene<<<1, 1>>>(d_scene);
+	syncAndCheckErrors();
 	cudaFree(d_scene);
 	syncAndCheckErrors();
-}
-
-
-// Kernels
-__global__ void initScene(Scene * ptrScene)
-{
-	new (ptrScene) Scene(new Hitable*[2], 2, new Light*[0], 0, new BlinnPhongMaterial[2], 2);
-	Sphere * pSphere = new Sphere();
-	ptrScene->objectList[0] = pSphere;
-	pSphere->c = {1.f, 0.0f, -10.0f};
-	pSphere->r = 1.f;
-	pSphere->materialId = 1;
-	pSphere = new Sphere();
-	ptrScene->objectList[1] = pSphere;
-	pSphere->c = {-1.f, 0.0f, -10.0f};
-	pSphere->r = 1.f;
-	pSphere->materialId = 0;
-
-	BlinnPhongMaterial * mat = &ptrScene->materials[0];
-	mat->ambient = {0.1f, 0.1f, 0.1f};
-	mat->diffuse = {0.6f, 0.f, 0.f};
-	mat->specular = {1.f, 1.f, 1.f};
-	mat->shininess = 32.f;
-	mat->mirror = 0.f;
-	mat = &ptrScene->materials[1];
-	mat->ambient = {0.0f, 0.0f, 0.0f};
-	mat->diffuse = {1.f, 1.0f, 1.f};
-	mat->specular = {1.f, 1.f, 1.f};
-	mat->shininess = 32.f;
-	mat->mirror = 1.f;
-}
-
-__global__ void initCornellBox(Scene * ptrScene)
-{
-	new (ptrScene) Scene(new Hitable*[8], 8, new Light*[2], 2, new BlinnPhongMaterial[5], 5);
-
-	PointLight * light = new PointLight;
-	ptrScene->lights[0] = light;
-	light->p = {0.f, .75f, -1.5f};
-	light->color = {.5f, .9f, .5f};
-
-	light = new PointLight;
-	ptrScene->lights[1] = light;
-	light->p = {.9f, .9f, -1.1f};
-	light->color = {1.f, .7f, .1f};
-
-//	AreaLight * light = new AreaLight;
-//	ptrScene->lights[0] = light;
-//	light->p = {-0.5f, .75f, -1.75f};
-//	light->n = {0.f, -1.f, 0.f};
-//	light->right = {1.f, 0.f, 0.f};
-//	light->up = {0.f, 0.f, -.5f};
-
-	// Floor
-	Square * pSquare = new Square();
-	ptrScene->objectList[0] = pSquare;
-	pSquare->p = Vec3(-1.f, -1.f, -1.f);
-	pSquare->right = Vec3(2.f, 0.f, 0.f);
-	pSquare->up = Vec3(0.f, 0.f, -2.f);
-	pSquare->n = Vec3(0.f, 1.f, 0.f);
-	pSquare->materialId = 0;
-
-	// Ceiling
-	pSquare = new Square();
-	ptrScene->objectList[1] = pSquare;
-	pSquare->p = Vec3(-1.f, 1.f, -3.f);
-	pSquare->right = Vec3(2.f, 0.f, 0.f);
-	pSquare->up = Vec3(0.f, 0.f, 2.f);
-	pSquare->n = Vec3(0.f, -1.f, 0.f);
-	pSquare->materialId = 0;
-
-	// Left wall
-	pSquare = new Square();
-	ptrScene->objectList[2] = pSquare;
-	pSquare->p = Vec3(-1.f, -1.f, -1.f);
-	pSquare->right = Vec3(0.f, 0.f, -2.f);
-	pSquare->up = Vec3(0.f, 2.f, 0.f);
-	pSquare->n = Vec3(1.f, 0.f, 0.f);
-	pSquare->materialId = 1;
-
-	// Right wall
-	pSquare = new Square();
-	ptrScene->objectList[3] = pSquare;
-	pSquare->p = Vec3(1.f, -1.f, -3.f);
-	pSquare->right = Vec3(0.f, 0.f, 2.f);
-	pSquare->up = Vec3(0.f, 2.f, 0.f);
-	pSquare->n = Vec3(-1.f, 0.f, 0.f);
-	pSquare->materialId = 2;
-
-    // Back Wall
-    pSquare = new Square();
-    ptrScene->objectList[4] = pSquare;
-    pSquare->p = Vec3(-1.f, -1.f, -3.f);
-    pSquare->right = Vec3(2.f, 0.f, 0.f);
-    pSquare->up = Vec3(0.f, 2.f, 0.f);
-    pSquare->n = Vec3(0.f, 0.f, 1.f);
-    pSquare->materialId = 0;
-
-    // Front Wall
-    pSquare = new Square();
-    ptrScene->objectList[5] = pSquare;
-    pSquare->p = Vec3(1.f, -1.f, -1.f);
-    pSquare->right = Vec3(-2.f, 0.f, 0.f);
-    pSquare->up = Vec3(0.f, 2.f, 0.f);
-    pSquare->n = Vec3(0.f, 0.f, -1.f);
-    pSquare->materialId = 0;
-
-    // Left sphere
-    Sphere * pSphere = new Sphere();
-    ptrScene->objectList[6] = pSphere;
-    pSphere->c = Vec3(-.5f, -.7f, -2.f);
-    pSphere->r = .3f;
-    pSphere->materialId = 4;
-
-    // Right sphere
-    pSphere = new Sphere();
-    ptrScene->objectList[7] = pSphere;
-    pSphere->c = Vec3(.5f, -.7f, -2.f);
-    pSphere->r = .3f;
-    pSphere->materialId = 3;
-
-    /***** Materials *****/
-
-    // White
-    BlinnPhongMaterial * mat = &ptrScene->materials[0];
-    mat->ambient = {0.f, 0.f, 0.f};
-    mat->diffuse = {1.f, 1.f, 1.f};
-    mat->specular = {1.f, 1.f, 1.f};
-    mat->shininess = 32.f;
-    mat->mirror = 0.f;
-
-    // Red
-	mat = &ptrScene->materials[1];
-	mat->ambient = {0.f, 0.f, 0.f};
-	mat->diffuse = {.6f, 0.f, 0.f};
-	mat->specular = {1.f, 1.f, 1.f};
-	mat->shininess = 32.f;
-	mat->mirror = 0.f;
-
-    // Green
-    mat = &ptrScene->materials[2];
-    mat->ambient = {0.f, 0.f, 0.f};
-    mat->diffuse = {0.f, .6f, 0.f};
-    mat->specular = {1.f, 1.f, 1.f};
-    mat->shininess = 32.f;
-    mat->mirror = 0.f;
-
-    // Mirror
-    mat = &ptrScene->materials[3];
-    mat->ambient = {0.f, 0.f, 0.f};
-    mat->diffuse = {1.f, 1.f, 1.f};
-    mat->specular = {1.f, 1.f, 1.f};
-    mat->shininess = 32.f;
-    mat->mirror = 1.f;
-
-	// Glass
-	mat = &ptrScene->materials[4];
-	mat->ambient = {0.f, 0.f, 0.f};
-	mat->diffuse = {1.f, 1.f, 1.f};
-	mat->specular = {1.f, 1.f, 1.f};
-	mat->shininess = 32.f;
-	mat->refraction = true;
-	mat->refractiveIndex = 1.52f;
 }
 
 __global__ void deleteScene(Scene * ptrScene)

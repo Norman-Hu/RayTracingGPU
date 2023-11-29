@@ -21,6 +21,7 @@ set(SOURCES main.cu
 			Rendering.cu include/Rendering.cuh
 			InputHandler.cu include/InputHandler.cuh
 			Light.cu include/Light.cuh
+			Importer.cu include/Importer.cuh
 )
 
 add_executable(raytracer2 ${SOURCES})
@@ -33,5 +34,5 @@ if (MSVC)
 endif()
 target_compile_options(raytracer2 PRIVATE -Xcudafe --diag_suppress=20012)
 
-target_link_libraries(raytracer2 PRIVATE glad glfw)
+target_link_libraries(raytracer2 PRIVATE glad glfw assimp)
 target_include_directories(raytracer2 PRIVATE include)

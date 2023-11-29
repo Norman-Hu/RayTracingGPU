@@ -4,3 +4,6 @@ cmake-build-*/
 out/
 build/
 CMakeSettings.json
+
+# Data
+scenes/

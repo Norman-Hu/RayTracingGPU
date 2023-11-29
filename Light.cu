@@ -9,6 +9,25 @@ __device__ LightSamples PointLight::getSamples(curandState_t * state)
 	return samples;
 }
 
+PointLight * createPointLight(const Vec3 & p)
+{
+	PointLight * res;
+	PointLight ** ptr_d_light;
+	cudaMalloc(&ptr_d_light, sizeof(PointLight *));
+	d_createPointLight<<<1, 1>>>(ptr_d_light, p);
+	cudaMemcpy(&res, ptr_d_light, sizeof(PointLight *), cudaMemcpyDeviceToHost);
+	cudaFree(ptr_d_light);
+	return res;
+}
+
+__global__ void d_createPointLight(PointLight ** ptr_d_light, Vec3 p)
+{
+	PointLight * light = new PointLight();
+	light->p = p;
+	*ptr_d_light = light;
+}
+
+
 __device__ LightSamples AreaLight::getSamples(curandState_t * state)
 {
 	constexpr unsigned int SAMPLE_COUNT = 8;

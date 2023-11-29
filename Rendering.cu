@@ -28,78 +28,56 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 		for (int i=0; i<maxBounces; ++i)
 		{
 			Hit hitInfo;
-			bool hit = scene->hit(ray, 0.001f, 50.0f, hitInfo);
+			bool hit = scene->hit(ray, 0.001f, 100.0f, hitInfo);
 			if (hit)
 			{
-				BlinnPhongMaterial & mat = scene->materials[hitInfo.materialId];
-				if (mat.mirror > 0.f)
-					ray = {hitInfo.p, Vec3::reflect(ray.direction, hitInfo.normal)};
-				else
-				if (mat.refraction)
+				PBRMaterial & mat = scene->materials[hitInfo.materialId];
+				int lightHits = 0;
+				for (int l=0; l<lightsCount; l++)
 				{
-					Vec3 incident = ray.direction;
-					Vec3 normal;
-					float ratio;
-					if (Vec3::dot(ray.direction, hitInfo.normal) > 0.0f)
+					Light * light = scene->lights[l];
+					LightSamples samples = light->getSamples(randState);
+
+					int sampleHits = 0;
+
+					Vec3 colorForLight(0.0f, 0.0f, 0.0f);
+					for (int lightSample=0; lightSample<samples.size; ++lightSample)
 					{
-						normal = -1.f * hitInfo.normal;
-						ratio = mat.refractiveIndex;
+						Vec3 lightPos = samples.samples[lightSample];
+
+						Vec3 lightDir = (lightPos - hitInfo.p);
+						float lightDistance = lightDir.length();
+						lightDir.normalize();
+
+						// check if obstructed
+						Hit _unused;
+						if (scene->hit({hitInfo.p, lightDir}, 0.001f, lightDistance, _unused));
+							continue;
+
+						++sampleHits;
+
+//						float diff = max(Vec3::dot(hitInfo.normal, lightDir), 0.0f);
+//						Vec3 diffuse = mat.diffuse * diff;
+//
+//						Vec3 viewDir = (-ray.direction).normalized();
+//						Vec3 halfDir = (lightDir + viewDir).normalized();
+//						float spec = powf(max(Vec3::dot(hitInfo.normal, halfDir), 0.0f), mat.shininess);
+//						Vec3 specular = spec * mat.specular;
+//
+//						Vec3 res = mat.ambient + diffuse + specular;
+//						colorForLight += res.mulComp(light->color);
+						colorForLight += mat.albedo;
 					}
-					else
+					if (sampleHits > 0)
 					{
-						ratio = 1.f / mat.refractiveIndex;
-						normal = hitInfo.normal;
+						colorForLight/=sampleHits;
+						++lightHits;
+						color += colorForLight;
 					}
-					ray = {hitInfo.p, Vec3::refract(incident, normal, ratio).normalized()};
 				}
-				else
-				{
-					int lightHits = 0;
-					for (int l=0; l<lightsCount; l++)
-					{
-						Light * light = scene->lights[l];
-						LightSamples samples = light->getSamples(randState);
-
-						int sampleHits = 0;
-
-						Vec3 colorForLight(0.0f, 0.0f, 0.0f);
-						for (int lightSample=0; lightSample<samples.size; ++lightSample)
-						{
-							Vec3 lightPos = samples.samples[lightSample];
-
-							Vec3 lightDir = (lightPos - hitInfo.p);
-							float lightDistance = lightDir.length();
-							lightDir.normalize();
-
-							// check if obstructed
-							Hit _unused;
-							if (scene->hit({hitInfo.p, lightDir}, 0.001f, lightDistance, _unused))
-								continue;
-
-							++sampleHits;
-
-							float diff = max(Vec3::dot(hitInfo.normal, lightDir), 0.0f);
-							Vec3 diffuse = mat.diffuse * diff;
-
-							Vec3 viewDir = (-ray.direction).normalized();
-							Vec3 halfDir = (lightDir + viewDir).normalized();
-							float spec = powf(max(Vec3::dot(hitInfo.normal, halfDir), 0.0f), mat.shininess);
-							Vec3 specular = spec * mat.specular;
-
-							Vec3 res = mat.ambient + diffuse + specular;
-							colorForLight += res.mulComp(light->color);
-						}
-						if (sampleHits > 0)
-						{
-							colorForLight/=sampleHits;
-							++lightHits;
-							color += colorForLight;
-						}
-					}
-					if (lightHits > 0)
-						color /= lightHits;
-					break;
-				}
+				if (lightHits > 0)
+					color /= lightHits;
+				break;
 			}
 			else break;
 		}

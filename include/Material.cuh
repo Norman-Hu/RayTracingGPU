@@ -21,10 +21,8 @@ struct BlinnPhongMaterial
 struct PBRMaterial
 {
     Vec3 albedo;
-    float normal;
     float metallic;
     float roughness;
-    float ao;
 };
 
 #endif // MATERIAL_H
