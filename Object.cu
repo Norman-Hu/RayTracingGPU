@@ -77,17 +77,17 @@ __device__ bool Mesh::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 		Vec3 e0 = v1 - v0;
 		Vec3 v0p = p - v0;
 		c = Vec3::cross(e0, v0p);
-		if (Vec3::dot(n, c) < 0) continue;
+		if (Vec3::dot(n, c) < 0.f) continue;
 
 		Vec3 e1 = v2 - v1;
 		Vec3 v1p = p - v1;
 		c = Vec3::cross(e1, v1p);
-		if (Vec3::dot(n, c) < 0) continue;
+		if (Vec3::dot(n, c) < 0.f) continue;
 
 		Vec3 e2 = v0 - v2;
 		Vec3 v2p = p - v2;
 		c = Vec3::cross(e2, v2p);
-		if (Vec3::dot(n, c) < 0) continue;
+		if (Vec3::dot(n, c) < 0.f) continue;
 
 		out.t = t;
 		out.p = p;
@@ -96,4 +96,21 @@ __device__ bool Mesh::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 		return true;
 	}
 	return false;
+}
+
+__device__ Mesh::Mesh()
+: vertices(nullptr)
+, normals(nullptr)
+, indices(nullptr)
+, vertices_count(0)
+, normals_count(0)
+, indices_count(0)
+{
+}
+
+__device__ Mesh::~Mesh()
+{
+    delete [] vertices;
+    delete [] normals;
+    delete [] indices;
 }
