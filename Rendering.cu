@@ -51,7 +51,7 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 
 						// check if obstructed
 						Hit _unused;
-						if (scene->hit({hitInfo.p, lightDir}, 0.001f, lightDistance, _unused));
+						if (scene->hit({hitInfo.p, lightDir}, 0.001f, lightDistance, _unused))
 							continue;
 
 						++sampleHits;
