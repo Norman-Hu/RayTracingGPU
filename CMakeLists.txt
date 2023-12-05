@@ -33,6 +33,7 @@ if (MSVC)
 	target_compile_definitions(raytracer2 PRIVATE _USE_MATH_DEFINES)
 endif()
 target_compile_options(raytracer2 PRIVATE -Xcudafe --diag_suppress=20012)
+target_compile_options(raytracer2 PRIVATE $<$<CONFIG:Debug>:-G>)
 
 target_link_libraries(raytracer2 PRIVATE glad glfw assimp)
 target_include_directories(raytracer2 PRIVATE include)

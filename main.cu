@@ -46,6 +46,11 @@ void setTitleFPS(GLFWwindow * pWindow)
 
 int main(int argc, char **argv)
 {
+    cudaDeviceSetLimit(cudaLimitStackSize, 2048);
+
+//    size_t test;
+//    cudaDeviceGetLimit(&test, cudaLimitStackSize);
+
 	GLFWwindow * window;
 	if (!glfwInit())
 		return -1;

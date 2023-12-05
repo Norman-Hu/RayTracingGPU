@@ -1,5 +1,6 @@
 #include <Object.cuh>
 #include <CudaHelpers.h>
+#include <cstdio>
 
 
 __device__ bool Sphere::hit(const Ray & ray, float tmin, float tmax, Hit & out)
@@ -60,6 +61,7 @@ __device__ bool Square::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 __device__ bool Mesh::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 {
 	bool intersects = false;
+	unsigned int triangle = -1;
 	for (unsigned int i = 0; i < indices_count; i += 3)
 	{
 		// Möller–Trumbore intersection algorithm
@@ -92,10 +94,26 @@ __device__ bool Mesh::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 		{
 			out.t = t;
 			out.p = ray.origin + t * ray.direction;
-			out.normal = Vec3::cross(e1, e2); // FIXME: Interpolate normals using barycentric coordinates
 			out.materialId = materialId;
 			intersects = true;
+			triangle = i; // To compute normal later
 		}
+	}
+	if (intersects)
+	{
+		// Compute normal using barycentric coordinates
+		Vec3 v0 = vertices[indices[triangle]], v1 = vertices[indices[triangle + 1]], v2 = vertices[indices[triangle + 2]];
+		Vec3 PA{v0-out.p};
+		Vec3 PB{v1-out.p};
+		Vec3 PC{v2-out.p};
+		float ABC = Vec3::cross(v0, v1).length()*.5f;
+		float PBC = Vec3::cross(PB, PC).length()*.5f;
+		float APC = Vec3::cross(PA, PC).length()*.5f;
+		float ABP = Vec3::cross(PA, PB).length()*.5f;
+		float alpha = PBC/ABC;
+		float beta = APC/ABC;
+		float gamma = ABP/ABC;
+		out.normal = alpha*normals[indices[triangle]] + beta*normals[indices[triangle+1]] + gamma*normals[indices[triangle+2]];
 	}
 	return intersects;
 }
