@@ -22,6 +22,8 @@ set(SOURCES main.cu
 			InputHandler.cu include/InputHandler.cuh
 			Light.cu include/Light.cuh
 			Importer.cu include/Importer.cuh
+			BVH.cu include/BVH.cuh
+			include/Memory.cuh
 )
 
 add_executable(raytracer2 ${SOURCES})

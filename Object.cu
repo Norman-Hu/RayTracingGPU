@@ -1,5 +1,6 @@
 #include <Object.cuh>
 #include <CudaHelpers.h>
+#include <Memory.cuh>
 
 
 __device__ bool Sphere::hit(const Ray & ray, float tmin, float tmax, Hit & out)
@@ -100,22 +101,58 @@ __device__ bool Mesh::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 	return intersects;
 }
 
-__device__ Mesh::Mesh()
+__host__ __device__ Mesh::Mesh()
 : vertices(nullptr)
 , normals(nullptr)
 , indices(nullptr)
 , vertices_count(0)
 , normals_count(0)
 , indices_count(0)
+, materialId(0)
 {
 }
 
-__device__ Mesh::~Mesh()
+__host__ __device__ Mesh::~Mesh()
 {
 	delete[] vertices;
 	delete[] normals;
 	delete[] indices;
 }
+
+__host__ __device__ Mesh::Mesh(Mesh &&other) noexcept
+: vertices(exchange<Vec3*>(other.vertices, nullptr))
+, normals(exchange<Vec3*>(other.normals, nullptr))
+, indices(exchange<unsigned int*>(other.indices, nullptr))
+, vertices_count(other.vertices_count)
+, normals_count(other.normals_count)
+, indices_count(other.indices_count)
+, materialId(other.materialId)
+{
+}
+
+__host__ __device__ Mesh & Mesh::operator=(Mesh &&other) noexcept
+{
+	swap(vertices, other.vertices);
+	swap(normals, other.normals);
+	swap(indices, other.indices);
+	vertices_count = other.vertices_count;
+	normals_count = other.normals_count;
+	indices_count = other.indices_count;
+	materialId = other.materialId;
+	return *this;
+}
+
+
+
+
+
+
+
+
+/////////////
+
+
+
 
 Mesh * createMesh()
 {
@@ -127,6 +164,9 @@ Mesh * createMesh()
 	cudaFree(ptr_d_Mesh);
 	return res;
 }
+
+
+
 
 __global__ void d_createMesh(Mesh ** ptr_d_mesh)
 {

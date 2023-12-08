@@ -6,6 +6,7 @@
 #include <assimp/postprocess.h>
 #include <iostream>
 #include <CudaHelpers.h>
+#include <BVH.cuh>
 
 
 
@@ -18,7 +19,8 @@ Scene * importSceneToGPU(const std::string & file)
 											  aiProcess_Triangulate |
 											  aiProcess_JoinIdenticalVertices |
 											  aiProcess_SortByPType |
-											  aiProcess_PreTransformVertices);
+//											  aiProcess_PreTransformVertices |
+											  aiProcess_FindInstances);
 
 	if (nullptr == scene)
 	{
@@ -32,33 +34,48 @@ Scene * importSceneToGPU(const std::string & file)
 		return nullptr;
 	}
 
+	std::vector<BVHInstance>
+
 	Scene * d_scene = createScene();
 	syncAndCheckErrors();
-	setHitableCount(d_scene, scene->mNumMeshes);
-	syncAndCheckErrors();
 
+
+	BVH * bvhList = new BVH[scene->mNumMeshes];
+	Mesh * meshes = new Mesh[scene->mNumMeshes];
 	for (int idMesh=0; idMesh<scene->mNumMeshes; ++idMesh)
 	{
-		const aiMesh & mesh = *scene->mMeshes[idMesh];
-		Mesh * d_mesh = createMesh();
-		setMeshVertices(d_mesh, (Vec3*)&(mesh.mVertices[0].x), mesh.mNumVertices);
-		setMeshMaterial(d_mesh, mesh.mMaterialIndex);
-		syncAndCheckErrors();
-		setMeshNormals(d_mesh, (Vec3*)&(mesh.mNormals[0].x), mesh.mNumVertices);
-		syncAndCheckErrors();
-		unsigned int * indices = new unsigned int[mesh.mNumFaces*3];
-		for (int i=0; i<mesh.mNumFaces; ++i)
+		const aiMesh & aimesh = *scene->mMeshes[idMesh];
+		Mesh mesh;
+		mesh.vertices = new Vec3[aimesh.mNumVertices*sizeof(Vec3)];
+		mesh.normals = new Vec3[aimesh.mNumVertices*sizeof(Vec3)];
+		memcpy(mesh.vertices, aimesh.mVertices, aimesh.mNumVertices*sizeof(Vec3));
+		memcpy(mesh.normals, aimesh.mNormals, aimesh.mNumVertices*sizeof(Vec3));
+		mesh.indices = new unsigned int[aimesh.mNumFaces*3];
+		for (int i=0; i<aimesh.mNumFaces; ++i)
 		{
-			indices[3*i+0] = mesh.mFaces[i].mIndices[0];
-			indices[3*i+1] = mesh.mFaces[i].mIndices[1];
-			indices[3*i+2] = mesh.mFaces[i].mIndices[2];
+			mesh.indices[3*i+0] = aimesh.mFaces[i].mIndices[0];
+			mesh.indices[3*i+1] = aimesh.mFaces[i].mIndices[1];
+			mesh.indices[3*i+2] = aimesh.mFaces[i].mIndices[2];
 		}
-		setMeshIndices(d_mesh, indices, mesh.mNumFaces*3);
-		syncAndCheckErrors();
-		delete [] indices;
 
-		setHitable(d_scene, idMesh, d_mesh);
-		syncAndCheckErrors();
+		meshes[idMesh] = std::move(mesh);
+
+		// build a BVH
+		BVH bvh(idMesh, meshes[idMesh]);
+		bvhList[idMesh] = std::move(bvh);
+	}
+
+	// Copy BVH list to GPU
+	{
+		BVH * d_bvhList = Scene::createBVHList(d_scene, scene->mNumMeshes);
+		for (int i=0; i<scene->mNumMeshes; ++i)
+			BVH::copyToGPU(bvhList[i], d_bvhList+i);
+	}
+
+	// TODO: Setup the TLAS
+	{
+		TLAS tlas();
+
 	}
 
 	setLightCount(d_scene, scene->mNumLights);

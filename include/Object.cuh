@@ -43,21 +43,21 @@ public:
 	__device__ bool hit(const Ray & ray, float tmin, float tmax, Hit & out) override;
 };
 
-class Mesh : public Hitable
+class Mesh
 {
 public:
+	__host__ __device__ Mesh();
+	__host__ __device__ ~Mesh();
+	__host__ __device__ Mesh(Mesh && other) noexcept;
+	__host__ __device__ Mesh& operator=(Mesh && other) noexcept;
+
 	Vec3 * vertices;
 	unsigned int vertices_count;
-
 	Vec3 * normals;
 	unsigned int normals_count;
-
 	unsigned int * indices;
 	unsigned int indices_count;
-
-    __device__ Mesh();
-    __device__ ~Mesh() override;
-	__device__ bool hit(const Ray & ray, float tmin, float tmax, Hit & out) override;
+	unsigned int materialId;
 };
 
 

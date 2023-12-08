@@ -3,8 +3,13 @@
 
 
 __device__ Scene::Scene()
-: objectList(nullptr)
-, objectCount(0)
+: tlas()
+, BVHList(nullptr)
+, bvhCount(0)
+, instances(nullptr)
+, instanceCount(0)
+, meshes(nullptr)
+, meshCount(0)
 , lights(nullptr)
 , lightCount(0)
 , materials(nullptr)
@@ -13,21 +18,11 @@ __device__ Scene::Scene()
 
 }
 
-__device__ Scene::Scene(Hitable ** _objectList, int _size, Light ** _lights, int _lightCount, PBRMaterial * _materials, int _materialCount)
-: objectList(_objectList)
-, objectCount(_size)
-, lights(_lights)
-, lightCount(_lightCount)
-, materials(_materials)
-, materialCount(_materialCount)
-{
-}
-
 __device__ Scene::~Scene()
 {
-	for (int i=0; i < objectCount; ++i)
-		delete objectList[i];
-	delete [] objectList;
+	delete [] BVHList;
+	delete [] instances;
+	delete [] meshes;
 	for (int i=0; i < lightCount; ++i)
 		delete lights[i];
 	delete [] lights;
@@ -36,10 +31,12 @@ __device__ Scene::~Scene()
 
 __device__ bool Scene::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 {
+	// TODO: trace with TLAS
 	bool hasHit = false;
 	float closest_t = tmax;
 
 	Hit tmpHit;
+
 	for (int i=0; i < objectCount; ++i)
 	{
 		if (objectList[i]->hit(ray, tmin, tmax, tmpHit))
@@ -55,16 +52,39 @@ __device__ bool Scene::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 	return hasHit;
 }
 
+__host__ BVH * Scene::createBVHList(Scene * d_scene, unsigned int count)
+{
+	// alloc pointer to the bvh list
+	BVH ** ptr;
+	errchk(cudaMalloc(&ptr, sizeof(BVH**)));
+
+	// instantiate list
+	d_createBVHList<<<1, 1>>>(d_scene, count, ptr);
+	syncAndCheckErrors();
+
+	// copy result
+	BVH * res;
+	errchk(cudaMemcpy(res, ptr, sizeof(BVH*), cudaMemcpyDeviceToHost));
+
+	errchk(cudaFree(ptr));
+	return res;
+}
+
+__global__ void d_createBVHList(Scene * d_scene, unsigned int count, BVH ** out)
+{
+	delete [] d_scene->BVHList;
+	d_scene->BVHList = new BVH[count];
+	*out = d_scene->BVHList;
+}
+
+
 // helpers
 Scene * createScene()
 {
 	Scene * d_scene;
 	cudaMalloc(&d_scene, sizeof(Scene));
 	d_createScene<<<1, 1>>>(d_scene);
-//	initScene<<<1, 1>>>(d_scene);
-//	initCornellBox<<<1, 1>>>(d_scene);
 	syncAndCheckErrors();
-
 	return d_scene;
 }
 

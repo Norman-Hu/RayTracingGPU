@@ -5,6 +5,7 @@
 #include <Object.cuh>
 #include <Material.cuh>
 #include <Light.cuh>
+#include <BVH.cuh>
 
 
 class Scene : public Hitable
@@ -12,17 +13,29 @@ class Scene : public Hitable
 public:
 	__device__ Scene();
 	__device__ ~Scene() override;
-	__device__ Scene(Hitable ** _objectList, int _size, Light ** _lights, int _lightCount, PBRMaterial * _materials, int _materialCount);
 	__device__ bool hit(const Ray & ray, float tmin, float tmax, Hit & out) override;
 
 public:
-	Hitable ** objectList;
-	int objectCount;
+	TLAS tlas;
+	BVH * BVHList;
+	unsigned int bvhCount;
+	BVHInstance * instances;
+	unsigned int instanceCount;
+	Mesh * meshes;
+	unsigned int meshCount;
+
 	Light ** lights;
 	int lightCount;
 	PBRMaterial * materials;
 	int materialCount;
+
+
+public:
+	__host__ static BVH * createBVHList(Scene * d_scene, unsigned int count);
 };
+
+__global__ static void d_createBVHList(Scene * d_scene, unsigned int count, BVH ** out);
+
 
 __global__ void deleteScene(Scene * ptrScene);
 

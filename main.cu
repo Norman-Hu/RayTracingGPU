@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 	// setup gpu memory
 
 	int threadCount = gridDimensions.x*blockDimensions.x*gridDimensions.y*blockDimensions.y;
-	Scene * d_scene = importSceneToGPU("scenes/cornell-light-lowpoly.glb");
+	Scene * d_scene = importSceneToGPU("scenes/cornell-lowpoly.glb");
 	syncAndCheckErrors();
 
 	curandState_t * randState;
