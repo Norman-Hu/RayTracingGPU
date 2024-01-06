@@ -7,7 +7,8 @@
 #include <iostream>
 #include <CudaHelpers.h>
 #include <BVH.cuh>
-
+#include <vector>
+#include <deque>
 
 
 Scene * importSceneToGPU(const std::string & file)
@@ -33,8 +34,6 @@ Scene * importSceneToGPU(const std::string & file)
 		std::cerr << "Error reading scene " << file << " : no meshes." << std::endl;
 		return nullptr;
 	}
-
-	std::vector<BVHInstance>
 
 	Scene * d_scene = createScene();
 	syncAndCheckErrors();
@@ -71,6 +70,52 @@ Scene * importSceneToGPU(const std::string & file)
 		for (int i=0; i<scene->mNumMeshes; ++i)
 			BVH::copyToGPU(bvhList[i], d_bvhList+i);
 	}
+
+
+    // Create BVH instances
+    std::vector<BVHInstance> instances;
+    {
+        std::deque<aiNode*> queue;
+        queue.push_back(scene->mRootNode);
+        while (!queue.empty())
+        {
+            aiNode * n = queue.front();
+            queue.pop_front();
+            for (int c=0; c<n->mNumChildren; ++c)
+                queue.push_back(n->mChildren[c]);
+
+            if (n->mNumMeshes == 0)
+                continue;
+
+            BVHInstance instance;
+            instance.bvhID = n->mMeshes[0];
+
+            aiMatrix4x4 transfo = n->mTransformation;
+            aiMatrix4x4 inverseTransfo = n->mTransformation;
+            inverseTransfo.Inverse();
+            transfo.Transpose();
+            inverseTransfo.Transpose();
+            std::memcpy(instance.transform.data(), &transfo.a1, sizeof(float)*16);
+            std::memcpy(instance.invTransform.data(), &inverseTransfo.a1, sizeof(float)*16);
+
+            Vec3 min = bvhList[instance.bvhID].nodes[0].aabb.min;
+            Vec3 max = bvhList[instance.bvhID].nodes[0].aabb.max;
+            for (int i = 0; i < 8; i++)
+            {
+                Vec4 transformed = instance.transform * Vec4(i & 1 ? max.x : min.x, i & 2 ? max.y : min.y, i & 4 ? max.z : min.z, 1.0f);
+                instance.bounds.grow_vec3(Vec3{transformed.x, transformed.y, transformed.z});
+            }
+            instances.push_back(std::move(instance));
+        }
+    }
+
+    // Copy BVH instances to GPU
+    {
+        BVHInstance * d_bvhInstanceList = Scene::createBVHInstanceList(d_scene, instances.size());
+        for (int i=0; i<instances.size(); ++i)
+            BVHInstance::copyToGPU(instances[i], d_bvhInstanceList+i);
+    }
+
 
 	// TODO: Setup the TLAS
 	{

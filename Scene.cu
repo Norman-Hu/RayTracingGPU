@@ -77,6 +77,30 @@ __global__ void d_createBVHList(Scene * d_scene, unsigned int count, BVH ** out)
 	*out = d_scene->BVHList;
 }
 
+__host__ static BVHInstance * createBVHInstanceList(Scene * d_scene, unsigned int count)
+{
+    // alloc pointer to the bvh list
+    BVHInstance ** ptr;
+    errchk(cudaMalloc(&ptr, sizeof(BVHInstance**)));
+
+    // instantiate list
+    d_createBVHInstanceList<<<1, 1>>>(d_scene, count, ptr);
+    syncAndCheckErrors();
+
+    // copy result
+    BVHInstance * res;
+    errchk(cudaMemcpy(res, ptr, sizeof(BVHInstance*), cudaMemcpyDeviceToHost));
+
+    errchk(cudaFree(ptr));
+    return res;
+}
+
+__global__ static void d_createBVHInstanceList(Scene * d_scene, unsigned int count, BVHInstance ** out)
+{
+    delete [] d_scene->instances;
+    d_scene->instances = new BVHInstance[count];
+    *out = d_scene->instances;
+}
 
 // helpers
 Scene * createScene()

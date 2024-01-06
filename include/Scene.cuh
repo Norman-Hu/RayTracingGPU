@@ -32,9 +32,11 @@ public:
 
 public:
 	__host__ static BVH * createBVHList(Scene * d_scene, unsigned int count);
+	__host__ static BVHInstance * createBVHInstanceList(Scene * d_scene, unsigned int count);
 };
 
 __global__ static void d_createBVHList(Scene * d_scene, unsigned int count, BVH ** out);
+__global__ static void d_createBVHInstanceList(Scene * d_scene, unsigned int count, BVHInstance ** out);
 
 
 __global__ void deleteScene(Scene * ptrScene);

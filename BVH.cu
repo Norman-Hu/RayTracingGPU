@@ -3,6 +3,19 @@
 #include <CudaHelpers.h>
 
 
+
+void AABB::grow_vec3(const Vec3 & p)
+{
+    min = Vec3(fminf(p.x, min.x), fminf(p.y, min.y), fminf(p.z, min.z));
+    max = Vec3(fmaxf(p.x, max.x), fmaxf(p.y, max.y), fmaxf(p.z, max.z));
+}
+
+void AABB::grow_aabb(const AABB & bounds)
+{
+    grow_vec3(bounds.min);
+    grow_vec3(bounds.max);
+}
+
 __host__ __device__ BVH::BVH()
 : nodes(nullptr)
 , nodeCount(0)
@@ -79,6 +92,22 @@ __global__ void d_BVH_copyToGPU(BVH * d_instance, BVHNode * d_nodeBuffer, unsign
 	d_instance->primitive_count = primitive_count;
 	memcpy(d_instance->primitives, d_primitivesBuffer, sizeof(unsigned int)*primitive_count);
 	d_instance->meshID = meshID;
+}
+
+void BVHInstance::copyToGPU(const BVHInstance & instance, BVHInstance * gpuMemory)
+{
+    d_BVHInstance_copyToGPU<<<1, 1>>>(gpuMemory, instance);
+    syncAndCheckErrors();
+}
+
+__global__ static void d_BVHInstance_copyToGPU(BVHInstance * d_instance, BVHInstance instanceToCopy)
+{
+    *d_instance = instanceToCopy;
+}
+
+__host__ __device__ bool TLASNode::isLeaf()
+{
+    return (nodeLeft == 0) && (nodeRight == 0);
 }
 
 __host__ __device__ TLAS::TLAS()

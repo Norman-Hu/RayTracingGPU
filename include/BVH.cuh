@@ -4,12 +4,16 @@
 
 #include <Vec3.cuh>
 #include <Object.cuh>
+#include <Matrix.cuh>
 
 
 struct AABB
 {
 	Vec3 min;
 	Vec3 max;
+
+    void grow_vec3(const Vec3 & p);
+    void grow_aabb(const AABB & bounds);
 };
 
 /******** BVH ********/
@@ -61,10 +65,15 @@ public:
 
 	// references
 	unsigned int bvhID = 0;
-private:
 	// transforms
-	// ...
+	Matrix4x4 transform;
+	Matrix4x4 invTransform;
+
+public:
+    static void copyToGPU(const BVHInstance & instance, BVHInstance * gpuMemory);
 };
+
+__global__ static void d_BVHInstance_copyToGPU(BVHInstance * d_instance, BVHInstance instanceToCopy);
 
 /******** TLAS ********/
 struct TLASNode
@@ -73,6 +82,7 @@ struct TLASNode
 	unsigned int nodeLeft;
 	unsigned int nodeRight;
 	unsigned int BLAS;
+    __host__ __device__ bool isLeaf();
 };
 
 class TLAS
