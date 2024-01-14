@@ -46,7 +46,9 @@ void setTitleFPS(GLFWwindow * pWindow)
 
 int main(int argc, char **argv)
 {
-	GLFWwindow * window;
+    cudaDeviceSetLimit(cudaLimitStackSize, 4096);
+
+    GLFWwindow * window;
 	if (!glfwInit())
 		return -1;
 
@@ -137,6 +139,7 @@ int main(int argc, char **argv)
 
 		Matrix4x4 rayTransform = invProj * camera.GetViewMatrix();
 
+//        renderStraight<<<1, 1>>>(d_scene, 800, 600, 0.1f, camera.Position, rayTransform, surfObj, randState);
 		render<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, rayTransform, surfObj, randState);
 		syncAndCheckErrors();
 

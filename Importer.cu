@@ -74,6 +74,12 @@ Scene * importSceneToGPU(const std::string & file)
 		for (int i=0; i<scene->mNumMeshes; ++i)
 			BVH::copyToGPU(bvhList[i], d_bvhList+i);
 	}
+	// Copy meshes list to GPU
+    {
+        Mesh * d_meshList = Scene::createMeshList(d_scene, scene->mNumMeshes);
+        for (int i=0; i<scene->mNumMeshes; ++i)
+            Mesh::copyToGPU(meshes[i], d_meshList+i);
+    }
 
 
     // Create BVH instances
@@ -128,10 +134,15 @@ Scene * importSceneToGPU(const std::string & file)
 		// copy to gpu
 		TLAS * d_tlas = Scene::createTLAS(d_scene);
 		BVHInstance * d_instances = TLAS::createBVHInstanceList(d_tlas, instances.size());
-		errchk(cudaMemcpy(d_instances, instances.data(), instances.size()*sizeof(BVHInstance), cudaMemcpyHostToDevice));
+//		errchk(cudaMemcpy(d_instances, instances.data(), instances.size()*sizeof(BVHInstance), cudaMemcpyHostToDevice));
 
-		TLASNode * d_nodeList = TLAS::createTLASNodeList(d_tlas, tlas.nodeCount);
-		errchk(cudaMemcpy(d_nodeList, tlas.nodes, tlas.nodeCount*sizeof(TLASNode), cudaMemcpyHostToDevice));
+        for (int i=0; i<instances.size(); ++i)
+            BVHInstance::copyToGPU(instances[i], d_instances+i);
+
+        TLASNode * d_nodeList = TLAS::createTLASNodeList(d_tlas, tlas.nodeCount);
+        for (int i=0; i<tlas.nodeCount; ++i)
+            TLASNode::copyToGPU(tlas.nodes[i], d_nodeList+i);
+//		errchk(cudaMemcpy(d_nodeList, tlas.nodes, tlas.nodeCount*sizeof(TLASNode), cudaMemcpyHostToDevice));
 	}
 
 	setLightCount(d_scene, scene->mNumLights);

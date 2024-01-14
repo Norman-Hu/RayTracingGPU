@@ -132,7 +132,7 @@ __global__ void testFillFramebuffer(unsigned int w, unsigned int h, cudaSurfaceO
 	}
 }
 
-__global__ void renderStraight(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface)
+__global__ void renderStraight(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState)
 {
 	float x = w/2.0f;
 	float y = h/2.0f;

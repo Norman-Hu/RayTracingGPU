@@ -29,10 +29,12 @@ public:
 
 
 public:
+	__host__ static Mesh * createMeshList(Scene * d_scene, unsigned int count);
 	__host__ static BVH * createBVHList(Scene * d_scene, unsigned int count);
 	__host__ static TLAS * createTLAS(Scene * d_scene);
 };
 
+__global__ void d_createMeshList(Scene * d_scene, unsigned int count, Mesh ** out);
 __global__ void d_createBVHList(Scene * d_scene, unsigned int count, BVH ** out);
 __global__ void d_createTLAS(Scene * d_scene, TLAS ** out);
 

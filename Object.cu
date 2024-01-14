@@ -174,6 +174,14 @@ __global__ void d_createMesh(Mesh ** ptr_d_mesh)
 	*ptr_d_mesh = mesh;
 }
 
+void Mesh::copyToGPU(const Mesh & instance, Mesh * gpuMemory)
+{
+    setMeshMaterial(gpuMemory, instance.materialId);
+    setMeshVertices(gpuMemory, instance.vertices, instance.vertices_count);
+    setMeshNormals(gpuMemory, instance.normals, instance.normals_count);
+    setMeshIndices(gpuMemory, instance.indices, instance.indices_count);
+}
+
 void setMeshMaterial(Mesh * mesh, unsigned int index)
 {
 	d_setMeshMaterial<<<1, 1>>>(mesh, index);

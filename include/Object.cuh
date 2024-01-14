@@ -8,7 +8,7 @@
 
 struct Hit
 {
-	float t;
+	float t = 1e30f;
 	Vec3 p;
 	Vec3 normal;
 	int materialId;
@@ -58,6 +58,8 @@ public:
 	unsigned int * indices;
 	unsigned int indices_count;
 	unsigned int materialId;
+
+    static void copyToGPU(const Mesh & instance, Mesh * gpuMemory);
 };
 
 

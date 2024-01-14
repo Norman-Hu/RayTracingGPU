@@ -20,8 +20,8 @@ struct AABB
 	float area() const;
 };
 
-__device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, float & distance, float tmin, float tmax);
-__device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, const Vec3 & inverseDir, float & distance, float tmin, float tmax);
+__device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, float & distance, float tmin, float tmax, Hit & out);
+__device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, const Vec3 & inverseDir, float & distance, float tmin, float tmax, Hit & out);
 
 /******** BVH ********/
 struct BVHNode
@@ -107,7 +107,10 @@ struct TLASNode
 	unsigned int nodeRight;
 	unsigned int BLAS;
     __host__ __device__ bool isLeaf();
+
+    static void copyToGPU(const TLASNode & node, TLASNode * gpuMemory);
 };
+__global__ static void d_TLASNode_copyToGPU(TLASNode * d_instance, TLASNode nodeToCopy);
 
 class TLAS
 {

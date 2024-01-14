@@ -50,13 +50,13 @@ Vec3 min_comp(const Vec3 & v1, const Vec3 & v2)
 //	return a > b ? a : b;
 //}
 
-__device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, float & distance, float tmin, float tmax)
+__device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, float & distance, float tmin, float tmax, Hit & out)
 {
 	Vec3 rD = {1.0f/ray.direction.x, 1.0f / ray.direction.y, 1.0f / ray.direction.z};
-	return intersect_aabb(ray, bounds, rD, distance, tmin, tmax);
+	return intersect_aabb(ray, bounds, rD, distance, tmin, tmax, out);
 }
 
-__device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, const Vec3 & inverseDir, float & distance, float tmin, float tmax)
+__device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, const Vec3 & inverseDir, float & distance, float tmin, float tmax, Hit & out)
 {
 	float tx1 = (bounds.min.x - ray.origin.x) * inverseDir.x, tx2 = (bounds.max.x - ray.origin.x) * inverseDir.x;
 	float tlower = fminf(tx1, tx2), thigher = fmaxf(tx1, tx2);
@@ -64,7 +64,7 @@ __device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, const Vec3 
 	tlower = fmaxf(tlower, fminf(ty1, ty2)), thigher = fminf(thigher, fmaxf(ty1, ty2));
 	float tz1 = (bounds.min.z - ray.origin.z) * inverseDir.z, tz2 = (bounds.max.z - ray.origin.z) * inverseDir.z;
 	tlower = fmaxf(tlower, fminf(tz1, tz2)), thigher = fminf(thigher, fmaxf(tz1, tz2));
-	if (thigher >= tlower && thigher > 0.0f && tlower > tmin && tlower < tmax)
+	if (thigher >= tlower && thigher > 0.0f && tlower < out.t)
 	{
 		distance = tlower;
 		return true;
@@ -169,6 +169,7 @@ __device__ bool BVH::intersect(const Ray & ray, float tmin, float tmax, Hit & ou
 					{
 						intersects = true;
 						out = tmp;
+                        out.materialId = mesh->materialId;
 					}
 				}
 			}
@@ -183,8 +184,8 @@ __device__ bool BVH::intersect(const Ray & ray, float tmin, float tmax, Hit & ou
 		BVHNode * child2 = &nodes[node->nodeRight];
 
 		float dist1 = 1e30f, dist2 = 1e30f;
-		bool hit1 = intersect_aabb(ray, child1->aabb, invDir, dist1, tmin, tmax);
-		bool hit2 = intersect_aabb(ray, child2->aabb, invDir, dist2, tmin, tmax);
+		bool hit1 = intersect_aabb(ray, child1->aabb, invDir, dist1, tmin, tmax, out);
+		bool hit2 = intersect_aabb(ray, child2->aabb, invDir, dist2, tmin, tmax, out);
 		if (dist1 > dist2)
 		{
 			swap(dist1, dist2);
@@ -383,8 +384,13 @@ void BVH::copyToGPU(const BVH & instance, BVH * gpuMemory)
 __global__ void d_BVH_copyToGPU(BVH * d_instance, BVHNode * d_nodeBuffer, unsigned int nodeCount, unsigned int * d_primitivesBuffer, unsigned int primitive_count, unsigned int meshID)
 {
 	d_instance->nodeCount = nodeCount;
+    delete [] d_instance->nodes;
+    d_instance->nodes = new BVHNode[nodeCount];
 	memcpy(d_instance->nodes, d_nodeBuffer, sizeof(BVHNode)*nodeCount);
+
 	d_instance->primitive_count = primitive_count;
+    delete [] d_instance->primitives;
+    d_instance->primitives = new unsigned int[primitive_count];
 	memcpy(d_instance->primitives, d_primitivesBuffer, sizeof(unsigned int)*primitive_count);
 	d_instance->meshID = meshID;
 }
@@ -410,6 +416,17 @@ void BVHInstance::copyToGPU(const BVHInstance & instance, BVHInstance * gpuMemor
 __global__ static void d_BVHInstance_copyToGPU(BVHInstance * d_instance, BVHInstance instanceToCopy)
 {
     *d_instance = instanceToCopy;
+}
+
+void TLASNode::copyToGPU(const TLASNode & node, TLASNode * gpuMemory)
+{
+    d_TLASNode_copyToGPU<<<1, 1>>>(gpuMemory, node);
+    syncAndCheckErrors();
+}
+
+__global__ void d_TLASNode_copyToGPU(TLASNode * d_node, TLASNode nodeToCopy)
+{
+    *d_node = nodeToCopy;
 }
 
 __host__ __device__ bool TLASNode::isLeaf()
@@ -491,8 +508,8 @@ __device__ bool TLAS::intersect(const Ray & ray, float tmin, float tmax, Hit & o
 		TLASNode * child1 = &nodes[node->nodeLeft];
 		TLASNode * child2 = &nodes[node->nodeRight];
 		float dist1 = 1e30f, dist2 = 1e30f;
-		bool hit1 = intersect_aabb(ray, child1->aabb, rD, dist1, tmin, tmax);
-		bool hit2 = intersect_aabb(ray, child2->aabb, rD, dist2, tmin, tmax);
+		bool hit1 = intersect_aabb(ray, child1->aabb, rD, dist1, tmin, tmax, out);
+		bool hit2 = intersect_aabb(ray, child2->aabb, rD, dist2, tmin, tmax, out);
 		if (dist1 > dist2)
 		{
 			swap(dist1, dist2);
@@ -540,6 +557,7 @@ int TLAS::findBestMatch(int * list, int N, int A) const
 
 void TLAS::build()
 {
+    nodes = new TLASNode[2*blasCount];
 	// assign a TLAS leaf node to each BLAS
 	nodeCount = 1;
 	int nodeIds[256];
@@ -551,7 +569,7 @@ void TLAS::build()
 		nodes[nodeCount].BLAS = i;
 
 		// leaf
-		nodes[nodeCount++].nodeLeft = 0;
+		nodes[nodeCount].nodeLeft = 0;
 		nodes[nodeCount++].nodeRight = 0;
 	}
 
@@ -603,6 +621,7 @@ __global__ static void d_createBVHInstanceList(TLAS * d_tlas, unsigned int count
 {
 	delete [] d_tlas->blas;
 	d_tlas->blas = new BVHInstance[count];
+    d_tlas->blasCount = count;
 	*out = d_tlas->blas;
 }
 
@@ -628,5 +647,6 @@ __global__ static void d_createTLASNodeList(TLAS * d_tlas, unsigned int count, T
 {
 	delete [] d_tlas->nodes;
 	d_tlas->nodes = new TLASNode[count];
+    d_tlas->nodeCount = count;
 	*out = d_tlas->nodes;
 }

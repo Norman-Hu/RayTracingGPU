@@ -51,6 +51,33 @@ __device__ bool Scene::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 //	return hasHit;
 }
 
+
+__host__ Mesh * Scene::createMeshList(Scene * d_scene, unsigned int count)
+{
+    // alloc pointer to the bvh list
+    Mesh ** ptr;
+    errchk(cudaMalloc(&ptr, sizeof(Mesh**)));
+
+    // instantiate list
+    d_createMeshList<<<1, 1>>>(d_scene, count, ptr);
+    syncAndCheckErrors();
+
+    // copy result
+    Mesh * res = nullptr;
+    errchk(cudaMemcpy(&res, ptr, sizeof(Mesh*), cudaMemcpyDeviceToHost));
+
+    errchk(cudaFree(ptr));
+    return res;
+}
+
+__global__ void d_createMeshList(Scene * d_scene, unsigned int count, Mesh ** out)
+{
+    delete [] d_scene->meshes;
+    d_scene->meshes = new Mesh[count];
+    d_scene->meshCount = count;
+    *out = d_scene->meshes;
+}
+
 __host__ BVH * Scene::createBVHList(Scene * d_scene, unsigned int count)
 {
 	// alloc pointer to the bvh list
@@ -73,6 +100,7 @@ __global__ void d_createBVHList(Scene * d_scene, unsigned int count, BVH ** out)
 {
 	delete [] d_scene->BVHList;
 	d_scene->BVHList = new BVH[count];
+    d_scene->bvhCount = count;
 	*out = d_scene->BVHList;
 }
 
