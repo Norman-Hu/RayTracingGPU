@@ -16,6 +16,11 @@ __host__ __device__ Vec4::Vec4(const Vec4 & other)
 {
 }
 
+__host__ __device__ Vec4::Vec4(const Vec3 & vec3, float w)
+		: x(vec3.x), y(vec3.y), z(vec3.z), w(w)
+{
+}
+
 __host__ __device__ float Vec4::sqLength() const {return x*x+y*y+z*z+w*w;}
 __host__ __device__ float Vec4::length() const {return sqrtf(sqLength());};
 
@@ -33,6 +38,11 @@ __host__ __device__ Vec4 Vec4::normalized() const
 	Vec4 other(*this);
 	other.normalize();
 	return other;
+}
+
+__host__ __device__ Vec3 Vec4::vec3() const
+{
+	return {x, y, z};
 }
 
 __host__ __device__ float & Vec4::operator[](unsigned int i)

@@ -46,7 +46,9 @@ Scene * importSceneToGPU(const std::string & file)
 		const aiMesh & aimesh = *scene->mMeshes[idMesh];
 		Mesh mesh;
 		mesh.vertices = new Vec3[aimesh.mNumVertices*sizeof(Vec3)];
+		mesh.vertices_count = aimesh.mNumVertices;
 		mesh.normals = new Vec3[aimesh.mNumVertices*sizeof(Vec3)];
+		mesh.normals_count = aimesh.mNumVertices;
 		memcpy(mesh.vertices, aimesh.mVertices, aimesh.mNumVertices*sizeof(Vec3));
 		memcpy(mesh.normals, aimesh.mNormals, aimesh.mNumVertices*sizeof(Vec3));
 		mesh.indices = new unsigned int[aimesh.mNumFaces*3];
@@ -56,6 +58,8 @@ Scene * importSceneToGPU(const std::string & file)
 			mesh.indices[3*i+1] = aimesh.mFaces[i].mIndices[1];
 			mesh.indices[3*i+2] = aimesh.mFaces[i].mIndices[2];
 		}
+		mesh.indices_count = aimesh.mNumFaces*3;
+		mesh.materialId = aimesh.mMaterialIndex;
 
 		meshes[idMesh] = std::move(mesh);
 
@@ -111,16 +115,23 @@ Scene * importSceneToGPU(const std::string & file)
 
     // Copy BVH instances to GPU
     {
-        BVHInstance * d_bvhInstanceList = Scene::createBVHInstanceList(d_scene, instances.size());
-        for (int i=0; i<instances.size(); ++i)
-            BVHInstance::copyToGPU(instances[i], d_bvhInstanceList+i);
+//        BVHInstance * d_bvhInstanceList = TLAS::createBVHInstanceList(d_scene, instances.size());
+//        for (int i=0; i<instances.size(); ++i)
+//            BVHInstance::copyToGPU(instances[i], d_bvhInstanceList+i);
     }
 
 
-	// TODO: Setup the TLAS
 	{
-		TLAS tlas();
+		// instantiate and build
+		TLAS tlas(instances.data(), instances.size());
 
+		// copy to gpu
+		TLAS * d_tlas = Scene::createTLAS(d_scene);
+		BVHInstance * d_instances = TLAS::createBVHInstanceList(d_tlas, instances.size());
+		errchk(cudaMemcpy(d_instances, instances.data(), instances.size()*sizeof(BVHInstance), cudaMemcpyHostToDevice));
+
+		TLASNode * d_nodeList = TLAS::createTLASNodeList(d_tlas, tlas.nodeCount);
+		errchk(cudaMemcpy(d_nodeList, tlas.nodes, tlas.nodeCount*sizeof(TLASNode), cudaMemcpyHostToDevice));
 	}
 
 	setLightCount(d_scene, scene->mNumLights);

@@ -16,11 +16,9 @@ public:
 	__device__ bool hit(const Ray & ray, float tmin, float tmax, Hit & out) override;
 
 public:
-	TLAS tlas;
+	TLAS * tlas;
 	BVH * BVHList;
 	unsigned int bvhCount;
-	BVHInstance * instances;
-	unsigned int instanceCount;
 	Mesh * meshes;
 	unsigned int meshCount;
 
@@ -32,12 +30,11 @@ public:
 
 public:
 	__host__ static BVH * createBVHList(Scene * d_scene, unsigned int count);
-	__host__ static BVHInstance * createBVHInstanceList(Scene * d_scene, unsigned int count);
+	__host__ static TLAS * createTLAS(Scene * d_scene);
 };
 
-__global__ static void d_createBVHList(Scene * d_scene, unsigned int count, BVH ** out);
-__global__ static void d_createBVHInstanceList(Scene * d_scene, unsigned int count, BVHInstance ** out);
-
+__global__ void d_createBVHList(Scene * d_scene, unsigned int count, BVH ** out);
+__global__ void d_createTLAS(Scene * d_scene, TLAS ** out);
 
 __global__ void deleteScene(Scene * ptrScene);
 
@@ -45,11 +42,6 @@ __global__ void deleteScene(Scene * ptrScene);
 Scene * createScene();
 __global__ void d_createScene(Scene * ptr);
 void destroyScene(Scene * d_scene);
-
-void setHitableCount(Scene * d_scene, unsigned int count);
-__global__ void d_setHitableCount(Scene * d_scene, unsigned int count);
-void setHitable(Scene * d_scene, unsigned int id, Hitable * hitable);
-__global__ void d_setHitable(Scene * d_scene, unsigned int id, Hitable * hitable);
 
 void setLightCount(Scene * d_scene, unsigned int count);
 __global__ void d_setLightCount(Scene * d_scene, unsigned int count);

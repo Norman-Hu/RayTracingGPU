@@ -3,7 +3,7 @@
 
 
 #include <cmath>
-
+#include <Vec3.cuh>
 
 class Vec4
 {
@@ -11,6 +11,7 @@ public:
 	__host__ __device__ Vec4();
 	__host__ __device__ Vec4(float _x, float _y, float _z, float _w);
 	__host__ __device__ Vec4(const Vec4 & other);
+	__host__ __device__ Vec4(const Vec3 & vec3, float w);
 
 	__host__ __device__ ~Vec4() = default;
 
@@ -19,6 +20,8 @@ public:
 
 	__host__ __device__ void normalize();
 	__host__ __device__ Vec4 normalized() const;
+
+	__host__ __device__ Vec3 vec3() const;
 
 	__host__ __device__ float & operator[](unsigned int i);
 	__host__ __device__ const float & operator[](unsigned int i) const;

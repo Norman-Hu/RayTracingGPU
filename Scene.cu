@@ -3,11 +3,9 @@
 
 
 __device__ Scene::Scene()
-: tlas()
+: tlas(nullptr)
 , BVHList(nullptr)
 , bvhCount(0)
-, instances(nullptr)
-, instanceCount(0)
 , meshes(nullptr)
 , meshCount(0)
 , lights(nullptr)
@@ -21,35 +19,36 @@ __device__ Scene::Scene()
 __device__ Scene::~Scene()
 {
 	delete [] BVHList;
-	delete [] instances;
 	delete [] meshes;
 	for (int i=0; i < lightCount; ++i)
 		delete lights[i];
 	delete [] lights;
+	delete [] tlas;
 	delete [] materials;
 }
 
 __device__ bool Scene::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 {
-	// TODO: trace with TLAS
-	bool hasHit = false;
-	float closest_t = tmax;
+	return tlas->intersect(ray, tmin, tmax, out, BVHList, meshes);
 
-	Hit tmpHit;
-
-	for (int i=0; i < objectCount; ++i)
-	{
-		if (objectList[i]->hit(ray, tmin, tmax, tmpHit))
-		{
-			hasHit = true;
-			if (tmpHit.t < closest_t)
-			{
-				closest_t = tmpHit.t;
-				out = tmpHit;
-			}
-		}
-	}
-	return hasHit;
+//	bool hasHit = false;
+//	float closest_t = tmax;
+//
+//	Hit tmpHit;
+//
+//	for (int i=0; i < objectCount; ++i)
+//	{
+//		if (objectList[i]->hit(ray, tmin, tmax, tmpHit))
+//		{
+//			hasHit = true;
+//			if (tmpHit.t < closest_t)
+//			{
+//				closest_t = tmpHit.t;
+//				out = tmpHit;
+//			}
+//		}
+//	}
+//	return hasHit;
 }
 
 __host__ BVH * Scene::createBVHList(Scene * d_scene, unsigned int count)
@@ -63,8 +62,8 @@ __host__ BVH * Scene::createBVHList(Scene * d_scene, unsigned int count)
 	syncAndCheckErrors();
 
 	// copy result
-	BVH * res;
-	errchk(cudaMemcpy(res, ptr, sizeof(BVH*), cudaMemcpyDeviceToHost));
+	BVH * res = nullptr;
+	errchk(cudaMemcpy(&res, ptr, sizeof(BVH*), cudaMemcpyDeviceToHost));
 
 	errchk(cudaFree(ptr));
 	return res;
@@ -77,30 +76,31 @@ __global__ void d_createBVHList(Scene * d_scene, unsigned int count, BVH ** out)
 	*out = d_scene->BVHList;
 }
 
-__host__ static BVHInstance * createBVHInstanceList(Scene * d_scene, unsigned int count)
+__host__ TLAS * Scene::createTLAS(Scene * d_scene)
 {
-    // alloc pointer to the bvh list
-    BVHInstance ** ptr;
-    errchk(cudaMalloc(&ptr, sizeof(BVHInstance**)));
+	// alloc pointer to the tlas ptr
+	TLAS ** ptr;
+	errchk(cudaMalloc(&ptr, sizeof(TLAS**)));
 
-    // instantiate list
-    d_createBVHInstanceList<<<1, 1>>>(d_scene, count, ptr);
-    syncAndCheckErrors();
+	// instantiate list
+	d_createTLAS<<<1, 1>>>(d_scene, ptr);
+	syncAndCheckErrors();
 
-    // copy result
-    BVHInstance * res;
-    errchk(cudaMemcpy(res, ptr, sizeof(BVHInstance*), cudaMemcpyDeviceToHost));
+	// copy result
+	TLAS * res = nullptr;
+	errchk(cudaMemcpy(&res, ptr, sizeof(TLAS*), cudaMemcpyDeviceToHost));
 
-    errchk(cudaFree(ptr));
-    return res;
+	errchk(cudaFree(ptr));
+	return res;
 }
 
-__global__ static void d_createBVHInstanceList(Scene * d_scene, unsigned int count, BVHInstance ** out)
+__global__ void d_createTLAS(Scene * d_scene, TLAS ** out)
 {
-    delete [] d_scene->instances;
-    d_scene->instances = new BVHInstance[count];
-    *out = d_scene->instances;
+	delete [] d_scene->tlas;
+	d_scene->tlas = new TLAS();
+	*out = d_scene->tlas;
 }
+
 
 // helpers
 Scene * createScene()
@@ -115,31 +115,6 @@ Scene * createScene()
 __global__ void d_createScene(Scene * ptr)
 {
 	new (ptr) Scene();
-}
-
-void setHitableCount(Scene * d_scene, unsigned int count)
-{
-	d_setHitableCount<<<1, 1>>>(d_scene, count);
-}
-
-__global__ void d_setHitableCount(Scene * d_scene, unsigned int count)
-{
-	for (int i=0; i < d_scene->objectCount; ++i)
-		delete d_scene->objectList[i];
-	delete [] d_scene->objectList;
-
-	d_scene->objectList = new Hitable*[count];
-	d_scene->objectCount = count;
-}
-
-void setHitable(Scene * d_scene, unsigned int id, Hitable * hitable)
-{
-	d_setHitable<<<1, 1>>>(d_scene, id, hitable);
-}
-
-__global__ void d_setHitable(Scene * d_scene, unsigned int id, Hitable * hitable)
-{
-	d_scene->objectList[id] = hitable;
 }
 
 void setLightCount(Scene * d_scene, unsigned int count)

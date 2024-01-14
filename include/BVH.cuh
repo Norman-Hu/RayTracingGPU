@@ -5,7 +5,10 @@
 #include <Vec3.cuh>
 #include <Object.cuh>
 #include <Matrix.cuh>
-
+Vec3 max_comp(const Vec3 & v1, const Vec3 & v2);
+Vec3 min_comp(const Vec3 & v1, const Vec3 & v2);
+int smin(int a, int b);
+int smax(int a, int b);
 
 struct AABB
 {
@@ -14,7 +17,11 @@ struct AABB
 
     void grow_vec3(const Vec3 & p);
     void grow_aabb(const AABB & bounds);
+	float area() const;
 };
+
+__device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, float & distance, float tmin, float tmax);
+__device__ bool intersect_aabb(const Ray & ray, const AABB & bounds, const Vec3 & inverseDir, float & distance, float tmin, float tmax);
 
 /******** BVH ********/
 struct BVHNode
@@ -24,7 +31,16 @@ struct BVHNode
 	unsigned int nodeRight;
 	int triangleIndex;
 	int triangleCount;
+
+	__host__ __device__ bool isLeaf() const {return triangleCount > 0;};
+	__host__ float calculateNodeCost()
+	{
+		Vec3 e = aabb.max - aabb.min; // extent of the node
+		return (e.x * e.y + e.y * e.z + e.z * e.x) * triangleCount;
+	}
 };
+
+__device__ bool intersectTri(const Ray & ray, Vec3 v0, Vec3 v1, Vec3 v2, float tmin, float tmax, Hit & out);
 
 class BVH
 {
@@ -32,12 +48,18 @@ public:
 	__host__ __device__ BVH();
 	BVH(unsigned int _meshID, const Mesh & mesh);
 
-	~BVH();
+	__host__ __device__ ~BVH();
 	BVH(BVH && other) noexcept;
 	BVH & operator=(BVH && other) noexcept;
-private:
-	void build();
 
+	__device__ bool intersect(const Ray & ray, float tmin, float tmax, Hit & out, Mesh * meshList, const Vec3 & invDir) const;
+
+private:
+	void build(const Mesh & mesh);
+	void updateNodeBounds(unsigned int nodeIdx, Vec3 & centroidMin, Vec3 & centroidMax, const Mesh & mesh, Vec3 * centroids);
+	void subdivide(unsigned int nodeIdx, unsigned int depth, unsigned int & nodePtr, Vec3 & centroidMin, Vec3 & centroidMax, const Mesh & mesh, Vec3 * centroids);
+	float findBestSplitPlane(BVHNode & node, int & axis, int & splitPos, Vec3 & centroidMin, Vec3 & centroidMax, const Mesh & mesh, const Vec3 * centroids);
+	static const int BINS = 8;
 public:
 	BVHNode * nodes;
 	unsigned int nodeCount;
@@ -69,6 +91,8 @@ public:
 	Matrix4x4 transform;
 	Matrix4x4 invTransform;
 
+	__device__ bool intersect(const Ray & ray, float tmin, float tmax, Hit & out, BVH * blasList, Mesh * meshList) const;
+
 public:
     static void copyToGPU(const BVHInstance & instance, BVHInstance * gpuMemory);
 };
@@ -91,12 +115,15 @@ public:
 	__host__ __device__ TLAS();
 	TLAS(BVHInstance * instances, unsigned int count);
 
-	~TLAS();
+	__host__ __device__ ~TLAS();
 	TLAS(TLAS && other) noexcept;
 	TLAS & operator=(TLAS && other) noexcept;
 
+	__device__ bool intersect(const Ray & ray, float tmin, float tmax, Hit & out, BVH * blasList, Mesh * meshList) const;
+
 private:
 	void build();
+	int findBestMatch(int * list, int N, int A) const;
 
 public:
 	TLASNode * nodes;
@@ -105,7 +132,12 @@ public:
 	BVHInstance * blas;
 	unsigned int blasCount;
 
-	unsigned int * nodeIds;
+public:
+	__host__ static BVHInstance * createBVHInstanceList(TLAS * d_tlas, unsigned int count);
+	__host__ static TLASNode * createTLASNodeList(TLAS * d_tlas, unsigned int count);
 };
+
+__global__ static void d_createBVHInstanceList(TLAS * d_tlas, unsigned int count, BVHInstance ** out);
+__global__ static void d_createTLASNodeList(TLAS * d_tlas, unsigned int count, TLASNode ** out);
 
 #endif // BVH_H
