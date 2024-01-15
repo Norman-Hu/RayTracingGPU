@@ -57,9 +57,25 @@ __device__ bool Square::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 	return true;
 }
 
+__host__ __device__ bool rayAABB(const Ray & ray, const AABB & aabb, float tmin, float tmax)
+{
+	Vec3 invD = {1.0f/ray.direction.x, 1.0f/ray.direction.y, 1.0f/ray.direction.z};
+	Vec3 t0s = compwise_mul((aabb.min - ray.origin), invD);
+	Vec3 t1s = compwise_mul((aabb.max - ray.origin), invD);
+
+	Vec3 tsmaller = compwise_min(t0s, t1s);
+	Vec3 tbigger  = compwise_max(t0s, t1s);
+
+	tmin = fmaxf(tmin, fmaxf(tsmaller[0], fmaxf(tsmaller[1], tsmaller[2])));
+	tmax = fminf(tmax, fminf(tbigger[0], fminf(tbigger[1], tbigger[2])));
+
+	return (tmin < tmax);
+}
+
 __device__ bool Mesh::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 {
 	bool intersects = false;
+	if (!rayAABB(ray, aabb, tmin, tmax)) return false;
 	for (unsigned int i = 0; i < indices_count; i += 3)
 	{
 		// Möller–Trumbore intersection algorithm
@@ -117,6 +133,17 @@ __device__ Mesh::~Mesh()
 	delete[] indices;
 }
 
+AABB computeAABB(Vec3 * vertices, unsigned int count)
+{
+	AABB res {vertices[0], vertices[0]};
+	for (int i=1; i<count; ++i)
+	{
+		res.min = compwise_min(res.min, vertices[i]);
+		res.max = compwise_max(res.max, vertices[i]);
+	}
+	return res;
+}
+
 Mesh * createMesh()
 {
 	Mesh * res;
@@ -132,6 +159,16 @@ __global__ void d_createMesh(Mesh ** ptr_d_mesh)
 {
 	Mesh * mesh = new Mesh();
 	*ptr_d_mesh = mesh;
+}
+
+void setMeshAABB(Mesh * d_mesh, const AABB & bounds)
+{
+	d_setMeshAABB<<<1, 1>>>(d_mesh, bounds);
+}
+
+__global__ void d_setMeshAABB(Mesh * d_mesh, AABB bounds)
+{
+	d_mesh->aabb = bounds;
 }
 
 void setMeshMaterial(Mesh * mesh, unsigned int index)

@@ -14,6 +14,14 @@ struct Hit
 	int materialId;
 };
 
+struct AABB
+{
+	Vec3 min;
+	Vec3 max;
+};
+
+__host__ __device__ bool rayAABB(const Ray & ray, const AABB & aabb, float tmin, float tmax);
+
 class Hitable
 {
 public:
@@ -55,14 +63,19 @@ public:
 	unsigned int * indices;
 	unsigned int indices_count;
 
+	AABB aabb;
+
     __device__ Mesh();
     __device__ ~Mesh() override;
 	__device__ bool hit(const Ray & ray, float tmin, float tmax, Hit & out) override;
 };
 
+AABB computeAABB(Vec3 * vertices, unsigned int count);
 
 Mesh * createMesh();
 __global__ void d_createMesh(Mesh ** ptr_d_mesh);
+void setMeshAABB(Mesh * d_mesh, const AABB & bounds);
+__global__ void d_setMeshAABB(Mesh * d_mesh, AABB bounds);
 void setMeshMaterial(Mesh * mesh, unsigned int index);
 __global__ void d_setMeshMaterial(Mesh * mesh, unsigned int index);
 void setMeshVertices(Mesh * mesh, Vec3 * vertices, unsigned int verticesCount);

@@ -41,6 +41,7 @@ Scene * importSceneToGPU(const std::string & file)
 	{
 		const aiMesh & mesh = *scene->mMeshes[idMesh];
 		Mesh * d_mesh = createMesh();
+		setMeshAABB(d_mesh, computeAABB((Vec3*)&(mesh.mVertices[0].x), mesh.mNumVertices));
 		setMeshVertices(d_mesh, (Vec3*)&(mesh.mVertices[0].x), mesh.mNumVertices);
 		setMeshMaterial(d_mesh, mesh.mMaterialIndex);
 		syncAndCheckErrors();

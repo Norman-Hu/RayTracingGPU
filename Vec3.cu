@@ -166,3 +166,29 @@ __host__ __device__ Vec3 operator/(const Vec3 & v, float a)
 {
 	return {v.x/a, v.y/a, v.z/a};
 }
+
+__host__ __device__ Vec3 compwise_max(Vec3 a, Vec3 b)
+{
+	return {
+			a.x > b.x ? a.x : b.x,
+			a.y > b.y ? a.y : b.y,
+			a.z > b.z ? a.z : b.z
+	};
+}
+
+__host__ __device__ Vec3 compwise_min(Vec3 a, Vec3 b)
+{
+	return {
+			a.x < b.x ? a.x : b.x,
+			a.y < b.y ? a.y : b.y,
+			a.z < b.z ? a.z : b.z
+	};
+}
+__host__ __device__ Vec3 compwise_mul(Vec3 a, Vec3 b)
+{
+	return {
+			a.x * b.x,
+			a.y * b.y,
+			a.z * b.z
+	};
+}
