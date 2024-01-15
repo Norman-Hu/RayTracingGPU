@@ -88,7 +88,7 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
         Vec3 beta{1.0f, 1.0f, 1.0f};
 		constexpr int maxBounces = 5;
         bool specularBounce = true;
-        constexpr int maxDepth = 5;
+        constexpr int maxDepth = 10;
         int depth = 0;
 
 		while (beta.max() > 0.0f)
@@ -119,7 +119,29 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
             Vec3 wo = -ray.direction;
             if (sampleLights)
             {
-
+                Light * light = scene->lights[static_cast<int>(curand_uniform(randState+tid)*scene->lightCount)];
+                LightSamples s = light->getSamples(randState);
+                for (int i=0; i<s.size; ++i)
+                {
+                    Vec3 lightDir = s.samples[i] - ray.origin;
+                    Hit lightHit;
+                    if (!scene->hit({hitInfo.p, lightDir.normalized()}, 0.001f, lightDir.length(), lightHit))
+                    {
+                        L += compwise_mul(beta, light->color);
+//                        Vec3 wi = lightDir.normalized();
+//                        Vec3 H = (wo+wi); H.normalize();
+//                        Vec3 F0 = Vec3{0.04f, 0.04f, 0.04f};
+//                        F0      = Vec3::mix(F0, mat.albedo, mat.metallic);
+//                        Vec3 F  = fresnelSchlick(fmaxf(Vec3::dot(H, wo), 0.0), F0);
+//                        float NDF = distributionGGX(hitInfo.normal, H, mat.roughness);
+//                        float G   = geometrySmith(hitInfo.normal, wo, wi, mat.roughness);
+//                        Vec3 numerator    = NDF * G * F;
+//                        float denominator = 4.0f * fmaxf(Vec3::dot(hitInfo.normal, wo), 0.0f) * fmaxf(Vec3::dot(hitInfo.normal, wi), 0.0f)  + 0.0001f;
+//                        Vec3 specular     = numerator / denominator;
+//                        Vec3 f = specular * fabsf(Vec3::dot(wi, hitInfo.normal));
+//                        L += compwise_mul(compwise_mul(beta, f), light->color);
+                    }
+                }
             }
 
             if (false) // TODO: Importance sampling
@@ -165,68 +187,6 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
                 ray.origin = hitInfo.p;
                 ray.direction = wi;
             }
-
-//			if (hit)
-//			{
-//				int lightHits = 0;
-//				for (int l=0; l<lightsCount; l++)
-//				{
-//					Light * light = scene->lights[l];
-//					LightSamples samples = light->getSamples(randState);
-//
-//					int sampleHits = 0;
-//
-//					Vec3 colorForLight(0.0f, 0.0f, 0.0f);
-//					for (int lightSample=0; lightSample<samples.size; ++lightSample)
-//					{
-//						Vec3 lightPos = samples.samples[lightSample];
-//
-//						Vec3 lightDir = (lightPos - hitInfo.p);
-//						float lightDistance = lightDir.length();
-//						lightDir.normalize();
-//
-//						// check if obstructed
-//						Hit _unused;
-//						if (scene->hit({hitInfo.p, lightDir}, 0.001f, lightDistance, _unused))
-//							continue;
-//
-//						++sampleHits;
-//
-////						float diff = max(Vec3::dot(hitInfo.normal, lightDir), 0.0f);
-////						Vec3 diffuse = mat.diffuse * diff;
-////
-////						Vec3 viewDir = (-ray.direction).normalized();
-////						Vec3 halfDir = (lightDir + viewDir).normalized();
-////						float spec = powf(max(Vec3::dot(hitInfo.normal, halfDir), 0.0f), mat.shininess);
-////						Vec3 specular = spec * mat.specular;
-////
-////						Vec3 res = mat.ambient + diffuse + specular;
-////						colorForLight += res.mulComp(light->color);
-//						colorForLight += mat.albedo;
-//					}
-//					if (sampleHits > 0)
-//					{
-//						colorForLight/=sampleHits;
-//						++lightHits;
-//						color += colorForLight;
-//					}
-//				}
-//				if (lightHits > 0)
-//					color /= lightHits;
-//				break;
-//			}
-//			else break;
-//		}
-//
-//		float maxVal = max(color.x, max(color.y, color.z));
-//		if (maxVal > 1.0f)
-//			color /= maxVal;
-//		color *= 255.0f;
-//		val.x = color.x;
-//		val.y = color.y;
-//		val.z = color.z;
-//		val.w = 255;
-//		surf2Dwrite<uchar4>(val, surface, (int)sizeof(uchar4)*x, y, cudaBoundaryModeClamp);
         }
 
 
