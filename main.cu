@@ -122,6 +122,7 @@ int main(int argc, char **argv)
 	cudaMalloc(&randState, threadCount * sizeof(curandState_t));
 	setupRandomState<<<gridDimensions, blockDimensions>>>(randState, time(nullptr));
 
+    int sampleCount = 0;
 	while (!glfwWindowShouldClose(window))
 	{
 		setTitleFPS(window);
@@ -139,8 +140,17 @@ int main(int argc, char **argv)
 
 		Matrix4x4 rayTransform = invProj * camera.GetViewMatrix();
 
-		render<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, rayTransform, surfObj, randState, false);
-		syncAndCheckErrors();
+        if (handler.simpleRender())
+        {
+            renderSimple<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, rayTransform, surfObj, randState, false, sampleCount);
+            syncAndCheckErrors();
+            sampleCount = 0;
+        }
+        else
+        {
+            render<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, rayTransform, surfObj, randState, false, sampleCount);
+		    syncAndCheckErrors();
+        }
 
 		// unmap cuda array
 		cudaGraphicsUnmapResources(1, &gr);
@@ -152,6 +162,7 @@ int main(int argc, char **argv)
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 		handler.handleInputs();
+        ++sampleCount;
 	}
 
 	// cleanup

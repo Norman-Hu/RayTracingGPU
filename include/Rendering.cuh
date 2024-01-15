@@ -15,7 +15,8 @@ __host__ __device__ Vec3 fresnelSchlick(float cosTheta, const Vec3 & F0);
 __host__ __device__ Vec3 sampleUniformHemisphere(float u, float v);
 __host__ __device__ Vec3 sampleUniformSphere(float u, float v);
 
-__global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState, bool sampleLights);
+__global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState, bool sampleLights, int sampleCount);
+__global__ void renderSimple(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState, bool sampleLights, int sampleCount);
 
 // random state
 __global__ void setupRandomState(curandState_t * state, uint64_t seed);

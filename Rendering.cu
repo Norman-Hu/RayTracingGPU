@@ -67,7 +67,7 @@ __host__ __device__ Vec3 sampleUniformSphere(float u, float v)
 }
 
 
-__global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState, bool sampleLights)
+__global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState, bool sampleLights, int sampleCount)
 {
 	int x = blockDim.x * blockIdx.x + threadIdx.x;
 	int y = blockDim.y * blockIdx.y + threadIdx.y;
@@ -233,14 +233,65 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
         L = compwise_div(L, (L + Vec3(1.0f, 1.0f, 1.0f)));
         L = compwise_pow(L, Vec3(1.0f/2.2f, 1.0f/2.2f, 1.0f/2.2f));
 
+        L*=255.0f;
+        if (sampleCount == 0)
+        {
+            uchar4 val;
+            val.x = static_cast<unsigned char>(L.x);
+            val.y = static_cast<unsigned char>(L.y);
+            val.z = static_cast<unsigned char>(L.z);
+            val.w = 255;
+            surf2Dwrite<uchar4>(val, surface, (int)sizeof(uchar4)*x, y, cudaBoundaryModeClamp);
+        }
+        else
+        {
+            // recover current state and average out
+            uchar4 currentUchar = surf2Dread<uchar4>(surface, (int)sizeof(uchar4)*x, y, cudaBoundaryModeClamp);
 
-        uchar4 val;
-        val.x = static_cast<unsigned char>(L.x*255.0f);
-        val.y = static_cast<unsigned char>(L.y*255.0f);
-        val.z = static_cast<unsigned char>(L.z*255.0f);
-        val.w = 255;
-		surf2Dwrite<uchar4>(val, surface, (int)sizeof(uchar4)*x, y, cudaBoundaryModeClamp);
+            Vec3 newVal(currentUchar.x, currentUchar.y, currentUchar.z);
+            newVal*=(float)sampleCount;
+            newVal+=L;
+            newVal/= (float)sampleCount + 1.0f;
+
+            uchar4 val;
+            val.x = static_cast<unsigned char>(newVal.x);
+            val.y = static_cast<unsigned char>(newVal.y);
+            val.z = static_cast<unsigned char>(newVal.z);
+            val.w = 255;
+		    surf2Dwrite<uchar4>(val, surface, (int)sizeof(uchar4)*x, y, cudaBoundaryModeClamp);
+        }
 	}
+}
+
+__global__ void renderSimple(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState, bool sampleLights, int sampleCount)
+{
+    int x = blockDim.x * blockIdx.x + threadIdx.x;
+    int y = blockDim.y * blockIdx.y + threadIdx.y;
+    int tid = gridDim.x*blockDim.x*(blockDim.y*blockIdx.y+threadIdx.y) + blockDim.x * blockIdx.x + threadIdx.x;
+    if (x<w && y<h) {
+        // Find ray
+        float ndc_x = (2.f * (float) x / (float) w) - 1.f;
+        float ndc_y = 1.f - (2.f * (float) y / (float) h);
+        Vec4 vec{ndc_x, ndc_y, camNear, 1.f};
+        vec = rayTransform * vec;
+        Vec3 dir = Vec3{vec[0], vec[1], vec[2]};
+        dir.normalize();
+        Ray ray{camPos, dir.normalized()};
+
+        uchar4 val{0, 0, 0, 255};
+        Hit hitInfo;
+        bool hit = scene->hit(ray, 0.001f, 100.0f, hitInfo);
+        if (hit) {
+            if (hitInfo.t > 10.0f)
+                hitInfo.t = 10.0f;
+            hitInfo.t /= 10.0f;
+            hitInfo.t = 1.0f - hitInfo.t;
+            val.x = hitInfo.t * 255.0f;
+            val.y = val.x;
+            val.z = val.x;
+        }
+        surf2Dwrite<uchar4>(val, surface, (int) sizeof(uchar4) * x, y, cudaBoundaryModeClamp);
+    }
 }
 
 __global__ void setupRandomState(curandState_t * state, uint64_t seed)

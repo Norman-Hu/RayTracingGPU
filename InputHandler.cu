@@ -9,6 +9,7 @@ InputHandler::InputHandler(GLFWwindow * _pWindow, Camera * _pCamera)
 , cursorCaptured(false)
 , lastCurPosX(0.0f)
 , lastCurPosY(0.0f)
+, isSimpleRender(false)
 {
 	if (glfwRawMouseMotionSupported())
 		glfwSetInputMode(pWindow, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
@@ -52,6 +53,9 @@ void InputHandler::keyCallback(int key, int scancode, int action, int mods)
 		cursorCaptured = false;
 		glfwSetInputMode(pWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
+
+    if (key == GLFW_KEY_X && action == GLFW_PRESS)
+        isSimpleRender = !isSimpleRender;
 }
 
 void InputHandler::mouseButtonCallback(int button, int action, int mods)
@@ -78,6 +82,11 @@ void InputHandler::cursorPosCallback(double xpos, double ypos)
 	lastCurPosX = xpos;
 	lastCurPosY = ypos;
 	pCamera->ProcessMouseMovement(offsetX, -offsetY, true);
+}
+
+bool InputHandler::simpleRender() const
+{
+    return isSimpleRender;
 }
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
