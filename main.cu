@@ -46,6 +46,8 @@ void setTitleFPS(GLFWwindow * pWindow)
 
 int main(int argc, char **argv)
 {
+    cudaDeviceSetLimit(cudaLimitStackSize, 2048);
+
 	GLFWwindow * window;
 	if (!glfwInit())
 		return -1;
@@ -113,7 +115,7 @@ int main(int argc, char **argv)
 	// setup gpu memory
 
 	int threadCount = gridDimensions.x*blockDimensions.x*gridDimensions.y*blockDimensions.y;
-	Scene * d_scene = importSceneToGPU("scenes/cornell-light-lowpoly.glb");
+	Scene * d_scene = importSceneToGPU("scenes/cornell-light-lowpoly2.glb");
 	syncAndCheckErrors();
 
 	curandState_t * randState;

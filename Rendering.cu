@@ -18,12 +18,28 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 
 		Ray ray{camPos, dir.normalized()};
 
-		uchar4 val;
+		uchar4 val {0, 0, 0, 255};
 		Vec3 colorVal = Vec3(0.0f, 0.0f, 0.0f);
 		int lightsCount = scene->lightCount;
 
 		Vec3 color(0.0f, 0.0f, 0.0f);
 		constexpr int maxBounces = 10;
+
+//        Hit hitInfo;
+//        bool hit = scene->hit(ray, 0.001f, 100.0f, hitInfo);
+//        if (hit)
+//        {
+//            if (hitInfo.t > 10.0f)
+//                hitInfo.t = 10.0f;
+//            hitInfo.t /= 10.0f;
+//            hitInfo.t = 1.0f - hitInfo.t;
+//            val.x = hitInfo.t * 255.0f;
+//            val.y = val.x;
+//            val.z = val.x;
+//        }
+//        surf2Dwrite<uchar4>(val, surface, (int)sizeof(uchar4)*x, y, cudaBoundaryModeClamp);
+//
+//        return;
 
 		for (int i=0; i<maxBounces; ++i)
 		{

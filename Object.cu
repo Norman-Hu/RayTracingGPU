@@ -74,7 +74,52 @@ __host__ __device__ bool rayAABB(const Ray & ray, const AABB & aabb, float tmin,
 
 __device__ bool Mesh::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 {
-	bool intersects = false;
+    bool intersects = false;
+    if (indices_count > 18 && !rayAABB(ray, aabb, tmin, tmax)) return false;
+    for (unsigned int i = 0; i < indices_count; i += 3)
+    {
+        // Möller–Trumbore intersection algorithm
+        // From https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+        constexpr float EPSILON = 1e-7f;
+        Vec3 v0 = vertices[indices[i]], v1 = vertices[indices[i + 1]], v2 = vertices[indices[i + 2]];
+
+//        Vec3 centroid = (v0+v1+v2)*0.33333f;
+//        float maxSqDist = fmaxf(fmaxf((v0 - centroid).sqLength(), (v1 - centroid).sqLength()), (v2 - centroid).sqLength());
+//        Vec3 oc = ray.origin - centroid;
+//        float b = Vec3::dot(oc, ray.direction);
+//        float c = Vec3::dot(oc, oc) - maxSqDist;
+//        float h = b*b - c;
+//        if(h < 0.0f)
+//            continue;
+
+        Vec3 v1v0 = v1 - v0;
+        Vec3 v2v0 = v2 - v0;
+        Vec3 rov0 = ray.origin - v0;
+
+        Vec3  n = Vec3::cross(v1v0, v2v0);
+        Vec3  q = Vec3::cross(rov0, ray.direction);
+        float d = 1.0f/Vec3::dot(ray.direction, n);
+        float u = d*Vec3::dot(-q, v2v0);
+        float v = d*Vec3::dot( q, v1v0);
+        float t = d*Vec3::dot(-n, rov0);
+
+        if (u < 0.0f || v < 0.0f || (u+v) > 1.0f || t < tmin || t > tmax)
+            continue;
+
+        if (!intersects || t < out.t)
+        {
+            out.t = t;
+            out.p = ray.origin + t * ray.direction;
+            out.normal = -Vec3::cross(v2v0, v1v0); // FIXME: Interpolate normals using barycentric coordinates
+            out.materialId = materialId;
+            intersects = true;
+        }
+    }
+    return intersects;
+}
+
+/*
+ * bool intersects = false;
 	if (!rayAABB(ray, aabb, tmin, tmax)) return false;
 	for (unsigned int i = 0; i < indices_count; i += 3)
 	{
@@ -82,39 +127,40 @@ __device__ bool Mesh::hit(const Ray & ray, float tmin, float tmax, Hit & out)
 		// From https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 		constexpr float EPSILON = 1e-7f;
 		Vec3 v0 = vertices[indices[i]], v1 = vertices[indices[i + 1]], v2 = vertices[indices[i + 2]];
-		Vec3 e1 = v1 - v0;
-		Vec3 e2 = v2 - v0;
-		Vec3 crossRayE2 = Vec3::cross(ray.direction, e2);
-		float det = Vec3::dot(e1, crossRayE2);
-		if (det > -EPSILON && det < EPSILON) // parallel
-			continue;
 
-		float invDet = 1.0f/det;
-		Vec3 s = ray.origin - v0;
-		float u = invDet * Vec3::dot(s, crossRayE2);
-		if (u < 0.f || u > 1.f)
-			continue;
+//        Vec3 centroid = (v0+v1+v2)*0.33333f;
+//        float maxSqDist = fmaxf(fmaxf((v0 - centroid).sqLength(), (v1 - centroid).sqLength()), (v2 - centroid).sqLength());
+//        Vec3 oc = ray.origin - centroid;
+//        float b = Vec3::dot(oc, ray.direction);
+//        float c = Vec3::dot(oc, oc) - maxSqDist;
+//        float h = b*b - c;
+//        if(h < 0.0f)
+//            continue;
 
-		Vec3 crossSE1 = Vec3::cross(s, e1);
-		float v = invDet * Vec3::dot(ray.direction, crossSE1);
-		if (v < 0.f || u+v > 1.f)
-			continue;
+        Vec3 v1v0 = v1 - v0;
+        Vec3 v2v0 = v2 - v0;
+        Vec3 rov0 = ray.origin - v0;
 
-		float t = invDet * Vec3::dot(e2, crossSE1);
-		if (t < tmin || t > tmax)
-			continue;
+        Vec3  n = Vec3::cross(v1v0, v2v0);
+        Vec3  q = Vec3::cross(rov0, ray.direction);
+        float d = 1.0f/Vec3::dot(ray.direction, n);
+        float u = d*Vec3::dot(-q, v2v0);
+        float v = d*Vec3::dot( q, v1v0);
+        float t = d*Vec3::dot(-n, rov0);
+
+        if (u < 0.0f || v < 0.0f || (u+v) > 1.0f)
+            continue;
 
 		if (!intersects || t < out.t)
 		{
 			out.t = t;
 			out.p = ray.origin + t * ray.direction;
-			out.normal = Vec3::cross(e1, e2); // FIXME: Interpolate normals using barycentric coordinates
+			out.normal = Vec3::cross(v2v0, v1v0); // FIXME: Interpolate normals using barycentric coordinates
 			out.materialId = materialId;
 			intersects = true;
 		}
 	}
-	return intersects;
-}
+	return intersects;*/
 
 __device__ Mesh::Mesh()
 : vertices(nullptr)
