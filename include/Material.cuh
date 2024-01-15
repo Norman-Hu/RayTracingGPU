@@ -23,6 +23,7 @@ struct PBRMaterial
     Vec3 albedo;
     float metallic;
     float roughness;
+    Vec3 emissive;
 };
 
 #endif // MATERIAL_H

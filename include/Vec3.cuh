@@ -26,6 +26,9 @@ public:
 	__host__ __device__ float & operator[](unsigned int i);
 	__host__ __device__ const float & operator[](unsigned int i) const;
 
+    __host__ __device__ float max() const;
+    __host__ __device__ float min() const;
+
 	__host__ __device__ Vec3 mulComp(const Vec3 & other) const;
 public:
 	float x, y, z;
@@ -53,9 +56,11 @@ __host__ __device__ Vec3 operator*(float a, const Vec3 & v);
 __host__ __device__ Vec3 operator*(const Vec3 & v, float a);
 __host__ __device__ Vec3 operator/(const Vec3 & v, float a);
 
-__host__ __device__ Vec3 compwise_max(Vec3 a, Vec3 b);
-__host__ __device__ Vec3 compwise_min(Vec3 a, Vec3 b);
-__host__ __device__ Vec3 compwise_mul(Vec3 a, Vec3 b);
+__host__ __device__ Vec3 compwise_max(const Vec3 & a, const Vec3 & b);
+__host__ __device__ Vec3 compwise_min(const Vec3 & a, const Vec3 & b);
+__host__ __device__ Vec3 compwise_mul(const Vec3 & a, const Vec3 & b);
+__host__ __device__ Vec3 compwise_div(const Vec3 & a, const Vec3 & b);
+__host__ __device__ Vec3 compwise_pow(const Vec3 & a, const Vec3 & b);
 
 
 #endif // VEC3_H

@@ -90,7 +90,12 @@ Scene * importSceneToGPU(const std::string & file)
 		float metallic;
 		if (mat.Get(AI_MATKEY_METALLIC_FACTOR, metallic) != AI_SUCCESS)
 			std::cerr << "Error: no metallic" << std::endl;
-		material.metallic = rough;
+		material.metallic = metallic;
+        aiColor3D emissive(0.f, 0.f, 0.f);
+        if (mat.Get(AI_MATKEY_COLOR_EMISSIVE, emissive) != AI_SUCCESS)
+            std::cerr << "Error: no emissive" << std::endl;
+        material.emissive = {emissive.r, emissive.g, emissive.b};
+
 		setMaterial(d_scene, idMat, material);
 		syncAndCheckErrors();
 	}

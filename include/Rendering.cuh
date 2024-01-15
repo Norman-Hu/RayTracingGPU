@@ -8,8 +8,14 @@
 #include <curand_kernel.h>
 #include <cstdint>
 
+__host__ __device__ float distributionGGX(const Vec3 & N, const Vec3 & H, float roughness);
+__host__ __device__ float geometrySchlickGGX(float NdotV, float roughness);
+__host__ __device__ float geometrySmith(const Vec3 & N, const Vec3 & V, const Vec3 & L, float roughness);
+__host__ __device__ Vec3 fresnelSchlick(float cosTheta, const Vec3 & F0);
+__host__ __device__ Vec3 sampleUniformHemisphere(float u, float v);
+__host__ __device__ Vec3 sampleUniformSphere(float u, float v);
 
-__global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState);
+__global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState, bool sampleLights);
 
 // random state
 __global__ void setupRandomState(curandState_t * state, uint64_t seed);

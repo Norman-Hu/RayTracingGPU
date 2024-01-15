@@ -65,6 +65,16 @@ __host__ __device__ const float & Vec3::operator[](unsigned int i) const
 	}
 }
 
+__host__ __device__ float Vec3::max() const
+{
+    return fmaxf(fmaxf(x, y), z);
+}
+
+__host__ __device__ float Vec3::min() const
+{
+    return fminf(fminf(x, y), z);
+}
+
 __host__ __device__ Vec3 Vec3::mulComp(const Vec3 & other) const
 {
 	return {x*other.x, y*other.y, z*other.z};
@@ -97,9 +107,9 @@ __host__ __device__ Vec3 Vec3::refract(const Vec3 & incident, const Vec3 & norma
 	return r_out_perp + r_out_parallel;
 }
 
-__host__ __device__ static Vec3 mix(const Vec3 & v1, const Vec3 & v2, float val)
+__host__ __device__ Vec3 Vec3::mix(const Vec3 & v1, const Vec3 & v2, float val)
 {
-	return v1*(1-val) + v2*val;
+	return v1 + val*(v2-v1);
 }
 
 // operators
@@ -167,7 +177,7 @@ __host__ __device__ Vec3 operator/(const Vec3 & v, float a)
 	return {v.x/a, v.y/a, v.z/a};
 }
 
-__host__ __device__ Vec3 compwise_max(Vec3 a, Vec3 b)
+__host__ __device__ Vec3 compwise_max(const Vec3 & a, const Vec3 & b)
 {
 	return {
 			a.x > b.x ? a.x : b.x,
@@ -176,7 +186,7 @@ __host__ __device__ Vec3 compwise_max(Vec3 a, Vec3 b)
 	};
 }
 
-__host__ __device__ Vec3 compwise_min(Vec3 a, Vec3 b)
+__host__ __device__ Vec3 compwise_min(const Vec3 & a, const Vec3 & b)
 {
 	return {
 			a.x < b.x ? a.x : b.x,
@@ -184,11 +194,29 @@ __host__ __device__ Vec3 compwise_min(Vec3 a, Vec3 b)
 			a.z < b.z ? a.z : b.z
 	};
 }
-__host__ __device__ Vec3 compwise_mul(Vec3 a, Vec3 b)
+__host__ __device__ Vec3 compwise_mul(const Vec3 & a, const Vec3 & b)
 {
 	return {
 			a.x * b.x,
 			a.y * b.y,
 			a.z * b.z
 	};
+}
+
+__host__ __device__ Vec3 compwise_div(const Vec3 & a, const Vec3 & b)
+{
+    return {
+            a.x / b.x,
+            a.y / b.y,
+            a.z / b.z
+    };
+}
+
+__host__ __device__ Vec3 compwise_pow(const Vec3 & a, const Vec3 & b)
+{
+    return {
+        powf(a.x, b.x),
+        powf(a.y, b.y),
+        powf(a.z, b.z)
+    };
 }
