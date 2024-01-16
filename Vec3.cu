@@ -99,12 +99,18 @@ __host__ __device__ Vec3 Vec3::reflect(const Vec3 & incident, const Vec3 & norma
 	return incident - 2.0f * dot(normal, incident) * normal;
 }
 
-__host__ __device__ Vec3 Vec3::refract(const Vec3 & incident, const Vec3 & normal, float ratio)
+__host__ __device__ bool Vec3::refract(const Vec3 & incident, const Vec3 & normal, float ratio, Vec3 & out)
 {
-	auto cos_theta = fmin(dot(-incident, normal), 1.0f);
-	Vec3 r_out_perp = ratio * (incident + cos_theta * normal);
-	Vec3 r_out_parallel = -sqrtf(fabs(1.0f - r_out_perp.sqLength())) * normal;
-	return r_out_perp + r_out_parallel;
+    Vec3 uv = incident.normalized();
+    float dt = dot(uv, normal);
+    float discriminant = 1.0f - ratio*ratio*(1-dt*dt);
+    if (discriminant > 0)
+    {
+        out = ratio*(uv - normal*dt) - normal*sqrtf(discriminant);
+        return true;
+    }
+    else
+        return false;
 }
 
 __host__ __device__ Vec3 Vec3::mix(const Vec3 & v1, const Vec3 & v2, float val)

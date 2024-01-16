@@ -66,6 +66,12 @@ __host__ __device__ Vec3 sampleUniformSphere(float u, float v)
     return {r * cosf(phi), r * sinf(phi), z};
 }
 
+__device__ float schlick(float cosine, float ref_idx)
+{
+    float r0 = (1.0f-ref_idx) / (1.0f+ref_idx);
+    r0 = r0*r0;
+    return r0 + (1.0f-r0)*pow((1.0f - cosine),5.0f);
+}
 
 __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camNear, Vec3 camPos, Matrix4x4 rayTransform, cudaSurfaceObject_t surface, curandState_t * randState, bool sampleLights, int sampleCount)
 {
@@ -84,113 +90,37 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
 		Ray ray{camPos, dir.normalized()};
 
         // init
-        Vec3 L{0.0f, 0.0f, 0.0f};
-        Vec3 beta{1.0f, 1.0f, 1.0f};
-		constexpr int maxBounces = 5;
-        bool specularBounce = true;
-        constexpr int maxDepth = 10;
-        int depth = 0;
-
-		while (beta.max() > 0.0f)
+        Vec3 res;
+        Ray cur_ray = ray;
+        Vec3 cur_attenuation = Vec3(1.0f,1.0f,1.0f);
+        for (int i=0; i<10; ++i)
         {
-            Hit hitInfo;
-            bool hit = scene->hit(ray, 0.001f, 100.0f, hitInfo);
-            if (!hit) {
-                // infinite lights, which have a fixed color
-                if (!sampleLights || specularBounce)
-                    L += compwise_mul(beta, {.2f, .2f, .2f});
-                break;
-            }
-
-            // Get material
-            PBRMaterial &mat = scene->materials[hitInfo.materialId];
-
-            // if we don't sample lights directly, account for emissive surfaces
-            if (!sampleLights || specularBounce)
+            Hit rec;
+            if (scene->hit(cur_ray, 0.001f, 100.0f, rec))
             {
-                L += compwise_mul(beta, mat.emissive);
-            }
+                PBRMaterial & mat = scene->materials[rec.materialId];
 
-            // end path if max depth is reached
-            if (depth++ == maxDepth)
-                break;
-
-            // direct illumination
-            Vec3 wo = -ray.direction;
-            if (sampleLights)
-            {
-                Light * light = scene->lights[static_cast<int>(curand_uniform(randState+tid)*scene->lightCount)];
-                LightSamples s = light->getSamples(randState);
-                for (int i=0; i<s.size; ++i)
-                {
-                    Vec3 lightDir = s.samples[i] - ray.origin;
-                    Hit lightHit;
-                    if (!scene->hit({hitInfo.p, lightDir.normalized()}, 0.001f, lightDir.length(), lightHit))
-                    {
-                        L += compwise_mul(beta, light->color);
-//                        Vec3 wi = lightDir.normalized();
-//                        Vec3 H = (wo+wi); H.normalize();
-//                        Vec3 F0 = Vec3{0.04f, 0.04f, 0.04f};
-//                        F0      = Vec3::mix(F0, mat.albedo, mat.metallic);
-//                        Vec3 F  = fresnelSchlick(fmaxf(Vec3::dot(H, wo), 0.0), F0);
-//                        float NDF = distributionGGX(hitInfo.normal, H, mat.roughness);
-//                        float G   = geometrySmith(hitInfo.normal, wo, wi, mat.roughness);
-//                        Vec3 numerator    = NDF * G * F;
-//                        float denominator = 4.0f * fmaxf(Vec3::dot(hitInfo.normal, wo), 0.0f) * fmaxf(Vec3::dot(hitInfo.normal, wi), 0.0f)  + 0.0001f;
-//                        Vec3 specular     = numerator / denominator;
-//                        Vec3 f = specular * fabsf(Vec3::dot(wi, hitInfo.normal));
-//                        L += compwise_mul(compwise_mul(beta, f), light->color);
-                    }
-                }
-            }
-
-            if (false) // TODO: Importance sampling
-            {
-
+                Vec3 target = rec.p + rec.normal + sampleUniformSphere(curand_uniform(randState+tid),
+                                                                       curand_uniform(randState+tid));
+                Ray scattered = Ray{rec.p, (target-rec.p).normalized()};
+                Vec3 attenuation = mat.albedo;
+                cur_attenuation = compwise_mul(attenuation, cur_attenuation);
+                cur_ray = scattered;
             }
             else
             {
-                // Uniform sampling
-                Vec3 wi;
-                float pdf = INV_2PI;
-                if (false) // TODO: reflective+transmissive
-                {
-
-                }
-                else
-                {
-                    wi = sampleUniformHemisphere(curand_uniform(randState+tid), curand_uniform(randState+tid));
-                    pdf = INV_2PI;
-                    // reflection
-                    if (Vec3::dot(wo, hitInfo.normal) * Vec3::dot(wi, hitInfo.normal) < 0)
-                        wi = -wi;
-                    // transmission
-//                    else if (Vec3::dot(wo, hitInfo.normal) * Vec3::dot(wi, hitInfo.normal) > 0)
-//                        wi = -wi;
-                }
-
-                Vec3 H = (wo+wi); H.normalize();
-                Vec3 F0 = Vec3{0.04f, 0.04f, 0.04f};
-                F0      = Vec3::mix(F0, mat.albedo, mat.metallic);
-                Vec3 F  = fresnelSchlick(fmaxf(Vec3::dot(H, wo), 0.0), F0);
-                float NDF = distributionGGX(hitInfo.normal, H, mat.roughness);
-                float G   = geometrySmith(hitInfo.normal, wo, wi, mat.roughness);
-                Vec3 numerator    = NDF * G * F;
-                float denominator = 4.0f * fmaxf(Vec3::dot(hitInfo.normal, wo), 0.0f) * fmaxf(Vec3::dot(hitInfo.normal, wi), 0.0f)  + 0.0001f;
-                Vec3 specular     = numerator / denominator;
-                Vec3 kS = F;
-                Vec3 kD = Vec3{1.0f, 1.0f, 1.0f} - kS;
-                kD *= 1.0f - mat.metallic;
-
-                beta = compwise_mul(specular * fabsf(Vec3::dot(wi, hitInfo.normal)) / pdf, beta);
-                specularBounce = false;
-                ray.origin = hitInfo.p;
-                ray.direction = wi;
+                Vec3 unit_direction = cur_ray.direction.normalized();
+                float t = 0.5f*(unit_direction.y + 1.0f);
+                Vec3 c = (1.0f-t)*Vec3(1.0f, 1.0f, 1.0f) + t*Vec3(0.5f, 0.7f, 1.0f);
+                res = compwise_mul(cur_attenuation, c);
+                break;
             }
         }
 
+        Vec3 L = res;
 
-        L = compwise_div(L, (L + Vec3(1.0f, 1.0f, 1.0f)));
+//        L = compwise_div(L, (L + Vec3(1.0f, 1.0f, 1.0f)));
+        L /= (L + Vec3(1.0f, 1.0f, 1.0f)).max();
         L = compwise_pow(L, Vec3(1.0f/2.2f, 1.0f/2.2f, 1.0f/2.2f));
 
         L*=255.0f;
@@ -209,9 +139,7 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
             uchar4 currentUchar = surf2Dread<uchar4>(surface, (int)sizeof(uchar4)*x, y, cudaBoundaryModeClamp);
 
             Vec3 newVal(currentUchar.x, currentUchar.y, currentUchar.z);
-            newVal*=(float)sampleCount;
-            newVal+=L;
-            newVal/= (float)sampleCount + 1.0f;
+            newVal += (L-newVal)/((float)sampleCount+1);
 
             uchar4 val;
             val.x = static_cast<unsigned char>(newVal.x);
