@@ -1,3 +1,10 @@
+IMPORTANT : initialiser les submodules git avant de compiler
+git submodule update --init --recursive
+puis
+mkdir build && cd build
+cmake ..
+make raytracer2
+
 # Raytracer CUDA
 
 Controls:
