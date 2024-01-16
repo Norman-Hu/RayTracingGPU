@@ -13,6 +13,7 @@ __host__ __device__ float geometrySchlickGGX(float NdotV, float roughness);
 __host__ __device__ float geometrySmith(const Vec3 & N, const Vec3 & V, const Vec3 & L, float roughness);
 __host__ __device__ Vec3 fresnelSchlick(float cosTheta, const Vec3 & F0);
 __host__ __device__ Vec3 sampleUniformHemisphere(float u, float v);
+__host__ __device__ Vec3 sampleHemisphereAroundNormal(float u, float v, const Vec3 & normal);
 __host__ __device__ Vec3 sampleUniformSphere(float u, float v);
 __device__ float schlick(float cosine, float ref_idx);
 

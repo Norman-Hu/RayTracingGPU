@@ -67,7 +67,9 @@ Scene * importSceneToGPU(const std::string & file)
 	for (int idLight=0; idLight<scene->mNumLights; ++idLight)
 	{
 		const aiLight & light = *scene->mLights[idLight];
-		Light * d_light = createPointLight({light.mPosition.x, light.mPosition.y, light.mPosition.z});
+        Vec3 color = {light.mColorDiffuse[0], light.mColorDiffuse[1], light.mColorDiffuse[2]};
+        color /= color.max();
+		Light * d_light = createPointLight({light.mPosition.x, light.mPosition.y, light.mPosition.z}, color);
 		syncAndCheckErrors();
 		setLight(d_scene, idLight, d_light);
 		syncAndCheckErrors();

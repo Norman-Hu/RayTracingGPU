@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 	// setup gpu memory
 
 	int threadCount = gridDimensions.x*blockDimensions.x*gridDimensions.y*blockDimensions.y;
-	Scene * d_scene = importSceneToGPU("scenes/test.glb");
+	Scene * d_scene = importSceneToGPU("scenes/test2.glb");
 	syncAndCheckErrors();
 
 	curandState_t * randState;
@@ -142,9 +142,9 @@ int main(int argc, char **argv)
 
         if (handler.simpleRender())
         {
+            sampleCount = 0;
             renderSimple<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, rayTransform, surfObj, randState, true, sampleCount);
             syncAndCheckErrors();
-            sampleCount = 0;
         }
         else
         {

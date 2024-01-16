@@ -9,7 +9,7 @@ InputHandler::InputHandler(GLFWwindow * _pWindow, Camera * _pCamera)
 , cursorCaptured(false)
 , lastCurPosX(0.0f)
 , lastCurPosY(0.0f)
-, isSimpleRender(false)
+, isSimpleRender(true)
 {
 	if (glfwRawMouseMotionSupported())
 		glfwSetInputMode(pWindow, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);

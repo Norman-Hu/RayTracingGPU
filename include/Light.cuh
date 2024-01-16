@@ -31,8 +31,8 @@ public:
 	Vec3 p;
 };
 
-PointLight * createPointLight(const Vec3 & p);
-__global__ void d_createPointLight(PointLight ** ptr_d_light, Vec3 p);
+PointLight * createPointLight(const Vec3 & p, const Vec3 & color);
+__global__ void d_createPointLight(PointLight ** ptr_d_light, Vec3 p, Vec3 color);
 
 class AreaLight : public Light
 {

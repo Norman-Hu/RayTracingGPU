@@ -5,6 +5,7 @@
 #define PI 3.14159265358979323846f
 #define INV_PI 0.31830988618379067154f
 #define INV_2PI 0.15915494309189533577f
+#define INV_4PI 0.07957747154594766788f
 
 // brdf
 __host__ __device__ float distributionGGX(const Vec3 & N, const Vec3 & H, float roughness)
@@ -58,6 +59,30 @@ __host__ __device__ Vec3 sampleUniformHemisphere(float u, float v)
     return {r * cosf(phi), r * sinf(phi), z};
 }
 
+__host__ __device__ Vec3 sampleHemisphereAroundNormal(float u, float v, const Vec3 & normal)
+{
+    Vec3 tangent;
+    if (fabs(normal.x) > fabs(normal.y))
+        tangent = (Vec3(-normal.z, 0.0f, normal.x)).normalized();
+    else
+        tangent = (Vec3(0.0f, normal.z, -normal.y)).normalized();
+
+    Vec3 bitangent = -Vec3::cross(normal, tangent);
+
+    // Transform the sampled point from local space to world space
+    float z = u;
+    float r = sqrtf(1.0f - z * z);
+    float phi = 2.0f * PI * v;
+
+    // Sampled point in local coordinates
+    Vec3 localPoint = {r * cosf(phi), r * sinf(phi), z};
+
+    // Transform local coordinates to world coordinates
+    Vec3 worldPoint = localPoint.x * tangent + localPoint.y * bitangent + localPoint.z * normal;
+
+    return worldPoint;
+}
+
 __host__ __device__ Vec3 sampleUniformSphere(float u, float v)
 {
     float z = 1.0f - 2.0f * u;
@@ -93,7 +118,7 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
         Vec3 res;
         Ray cur_ray = ray;
         Vec3 cur_attenuation = Vec3(1.0f,1.0f,1.0f);
-        for (int i=0; i<10; ++i)
+        for (int i=0; i<5; ++i)
         {
             Hit rec;
             if (scene->hit(cur_ray, 0.001f, 100.0f, rec))
@@ -106,13 +131,25 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
                 Vec3 attenuation = mat.albedo;
                 cur_attenuation = compwise_mul(attenuation, cur_attenuation);
                 cur_ray = scattered;
+
+                if (scene->lightCount > 0)
+                {
+                    Light *light = scene->lights[static_cast<int>(curand_uniform(randState + tid) * ((float)scene->lightCount-0.00001f))];
+                    LightSamples s = light->getSamples(randState);
+                    for (int i = 0; i < s.size; ++i) {
+                        Vec3 lightDir = s.samples[i] - rec.p;
+                        Hit lightHit;
+                        if (!scene->hit({rec.p, lightDir.normalized()}, 0.001f, lightDir.length(), lightHit)) {
+                            res += compwise_mul(cur_attenuation, light->color);
+                        }
+                    }
+                }
             }
             else
             {
-                Vec3 unit_direction = cur_ray.direction.normalized();
-                float t = 0.5f*(unit_direction.y + 1.0f);
-                Vec3 c = (1.0f-t)*Vec3(1.0f, 1.0f, 1.0f) + t*Vec3(0.5f, 0.7f, 1.0f);
-                res = compwise_mul(cur_attenuation, c);
+//                float t = 0.5f*(cur_ray.direction.y + 1.0f);
+//                Vec3 c = (1.0f-t)*Vec3(1.0f, 1.0f, 1.0f) + t*Vec3(0.5f, 0.7f, 1.0f);
+//                res = compwise_mul(cur_attenuation, c);
                 break;
             }
         }
