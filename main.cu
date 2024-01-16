@@ -142,7 +142,7 @@ int main(int argc, char **argv)
 
         if (handler.simpleRender())
         {
-            sampleCount = 0;
+            sampleCount = -1;
             renderSimple<<<gridDimensions, blockDimensions>>>(d_scene, 800, 600, 0.1f, camera.Position, rayTransform, surfObj, randState, true, sampleCount);
             syncAndCheckErrors();
         }

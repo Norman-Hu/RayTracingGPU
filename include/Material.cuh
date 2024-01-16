@@ -24,6 +24,7 @@ struct PBRMaterial
     float metallic;
     float roughness;
     Vec3 emissive;
+    float transmissive;
 };
 
 #endif // MATERIAL_H

@@ -118,10 +118,10 @@ __global__ void render(Scene * scene, unsigned int w, unsigned int h, float camN
         Vec3 res;
         Ray cur_ray = ray;
         Vec3 cur_attenuation = Vec3(1.0f,1.0f,1.0f);
-        for (int i=0; i<5; ++i)
+        for (int i=0; i<3; ++i)
         {
             Hit rec;
-            if (scene->hit(cur_ray, 0.001f, 100.0f, rec))
+            if (scene->hit(cur_ray, 0.0001f, 100.0f, rec))
             {
                 PBRMaterial & mat = scene->materials[rec.materialId];
 

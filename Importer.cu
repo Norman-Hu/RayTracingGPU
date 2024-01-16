@@ -97,6 +97,9 @@ Scene * importSceneToGPU(const std::string & file)
         if (mat.Get(AI_MATKEY_COLOR_EMISSIVE, emissive) != AI_SUCCESS)
             std::cerr << "Error: no emissive" << std::endl;
         material.emissive = {emissive.r, emissive.g, emissive.b};
+        float transmissive = 0.0f;
+        mat.Get(AI_MATKEY_TRANSMISSION_FACTOR, transmissive);
+        material.transmissive = transmissive;
 
 		setMaterial(d_scene, idMat, material);
 		syncAndCheckErrors();
