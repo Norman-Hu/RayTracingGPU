@@ -46,6 +46,13 @@ void setTitleFPS(GLFWwindow * pWindow)
 
 int main(int argc, char **argv)
 {
+    if (argc != 2)
+    {
+        std::cerr << "Usage :  ./" << argv[0] << " <scene.glb>" << std::endl;
+        return -1;
+    }
+    std::string filename{argv[1]};
+
     cudaDeviceSetLimit(cudaLimitStackSize, 4096);
 
 	GLFWwindow * window;
@@ -115,7 +122,7 @@ int main(int argc, char **argv)
 	// setup gpu memory
 
 	int threadCount = gridDimensions.x*blockDimensions.x*gridDimensions.y*blockDimensions.y;
-	Scene * d_scene = importSceneToGPU("scenes/test2.glb");
+	Scene * d_scene = importSceneToGPU(filename);
 	syncAndCheckErrors();
 
 	curandState_t * randState;
